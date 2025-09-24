@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Effects_Remote
+  m_EditorClassIdentifier: 
+  m_GroupName: Effects_Remote
+  m_GUID: 059c63c19e2077a47b258647738f8729
+  m_SerializeEntries: []
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 12e220ce81dbe3f498491236c88d2ecc, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 9e07dc7d22edb2543bd3d5797a779753, type: 2}
+    - {fileID: 11400000, guid: 53cd2a2c57801074cac83cfaaae95d4e, type: 2}

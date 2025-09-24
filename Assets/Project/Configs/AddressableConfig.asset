@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b10c26da5d2c35429128a56b1ee2bb2, type: 3}
+  m_Name: AddressableConfig
+  m_EditorClassIdentifier: 
+  _settings:
+    DefaultProfile: Default
+    DevelopmentProfile: Development
+    ProductionProfile: Production
+    EnableRetry: 1
+    MaxRetries: 3
+    RetryDelay: 1
+    EnableCaching: 1
+    MaxCacheSizeMB: 100
+    FirstLoadBudgetWebGL: 30
+    FirstLoadBudgetMobile: 15
+    EnableDiagnosticLogging: 1
+  _coreAssetKeys:
+  - ui_main_menu
+  - ui_loading_screen
+  - material_default
+  - audio_click_sound
+  _remoteAssetKeys:
+  - characters_player_prefab
+  - environment_tree_01
+  - effects_explosion_particles
+  - levels_level01_scene
+  _groupConfigs:
+  - GroupName: Core_Local
+    Priority: 1
+    IncludeInBuild: 1
+  - GroupName: UI_Remote
+    Priority: 2
+    IncludeInBuild: 0
+  - GroupName: Characters_Remote
+    Priority: 3
+    IncludeInBuild: 0
+  - GroupName: Environment_Remote
+    Priority: 4
+    IncludeInBuild: 0
+  - GroupName: Effects_Remote
+    Priority: 5
+    IncludeInBuild: 0
+  - GroupName: Levels_Remote
+    Priority: 6
+    IncludeInBuild: 0

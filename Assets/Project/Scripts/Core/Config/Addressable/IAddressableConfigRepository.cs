@@ -3,13 +3,13 @@ using Project.Core.Services.Addressable.Models;
 namespace Project.Core.Config.Addressable
 {
     /// <summary>
-    /// Repository interface for Addressable configuration
-    /// Интерфейс репозитория для конфигурации Addressables
+    /// Repository interface for Addressable configuration access
+    /// Интерфейс репозитория для доступа к конфигурации Addressables
     /// </summary>
     public interface IAddressableConfigRepository
     {
         /// <summary>
-        /// Get Addressable settings / Получить настройки Addressables
+        /// Get Addressable system settings / Получить настройки системы Addressables
         /// </summary>
         AddressableSettings GetSettings();
         
@@ -19,14 +19,9 @@ namespace Project.Core.Config.Addressable
         string[] GetCoreAssetKeys();
         
         /// <summary>
-        /// Get remote groups configuration / Получить конфигурацию удаленных групп
+        /// Get remote asset keys / Получить ключи удаленных ресурсов
         /// </summary>
-        GroupConfig[] GetRemoteGroups();
-        
-        /// <summary>
-        /// Get available labels / Получить доступные метки
-        /// </summary>
-        string[] GetAvailableLabels();
+        string[] GetRemoteAssetKeys();
         
         /// <summary>
         /// Get all asset keys / Получить все ключи ресурсов
@@ -34,12 +29,22 @@ namespace Project.Core.Config.Addressable
         string[] GetAllAssetKeys();
         
         /// <summary>
-        /// Find group by asset key / Найти группу по ключу ресурса
+        /// Get group configurations / Получить конфигурации групп
         /// </summary>
-        string FindGroupByAssetKey(string assetKey);
+        GroupConfig[] GetGroupConfigs();
         
         /// <summary>
-        /// Get current profile name based on build settings / Получить имя текущего профиля на основе настроек билда
+        /// Check if asset key is core / Проверить, является ли ключ ресурса основным
+        /// </summary>
+        bool IsCoreAsset(string key);
+        
+        /// <summary>
+        /// Get group configuration by name / Получить конфигурацию группы по имени
+        /// </summary>
+        GroupConfig GetGroupConfig(string groupName);
+        
+        /// <summary>
+        /// Get current profile name based on build settings / Получить имя текущего профиля на основе настроек сборки
         /// </summary>
         string GetCurrentProfileName();
     }
