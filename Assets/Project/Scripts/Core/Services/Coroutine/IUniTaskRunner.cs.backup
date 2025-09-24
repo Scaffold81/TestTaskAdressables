@@ -1,0 +1,74 @@
+using UnityEngine;
+using Cysharp.Threading.Tasks;
+using System.Threading;
+
+namespace Game.Services
+{
+    /// <summary>
+    /// Interface for running UniTasks in services
+    /// </summary>
+    public interface IUniTaskRunner
+    {
+        UniTask DelayAsync(int milliseconds);
+        UniTask DelayAsync(float seconds);
+        UniTask DelayFrameAsync(int frameCount = 1);
+        UniTask WaitForEndOfFrameAsync();
+        UniTask WaitForFixedUpdateAsync();
+        void CancelAllTasks();
+    }
+    
+    /// <summary>
+    /// MonoBehaviour wrapper for running UniTasks in pure services
+    /// </summary>
+    public class UniTaskRunner : MonoBehaviour, IUniTaskRunner
+    {
+        private CancellationTokenSource cancellationTokenSource;
+        
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+            cancellationTokenSource = new CancellationTokenSource();
+        }
+        
+        private void OnDestroy()
+        {
+            CancelAllTasks();
+        }
+        
+        public UniTask DelayAsync(int milliseconds)
+        {
+            return UniTask.Delay(milliseconds, cancellationToken: cancellationTokenSource.Token);
+        }
+        
+        public UniTask DelayAsync(float seconds)
+        {
+            return UniTask.Delay((int)(seconds * 1000), cancellationToken: cancellationTokenSource.Token);
+        }
+        
+        public UniTask DelayFrameAsync(int frameCount = 1)
+        {
+            return UniTask.DelayFrame(frameCount, cancellationToken: cancellationTokenSource.Token);
+        }
+        
+        public UniTask WaitForEndOfFrameAsync()
+        {
+            return UniTask.WaitForEndOfFrame(cancellationToken: cancellationTokenSource.Token);
+        }
+        
+        public UniTask WaitForFixedUpdateAsync()
+        {
+            return UniTask.WaitForFixedUpdate(cancellationToken: cancellationTokenSource.Token);
+        }
+        
+        public void CancelAllTasks()
+        {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource?.Dispose();
+            
+            if (this != null)
+            {
+                cancellationTokenSource = new CancellationTokenSource();
+            }
+        }
+    }
+}

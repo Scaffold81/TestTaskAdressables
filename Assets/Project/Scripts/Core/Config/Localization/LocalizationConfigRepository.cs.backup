@@ -1,0 +1,76 @@
+using UnityEngine;
+using Zenject;
+
+namespace Game.Config
+{
+    public interface ILocalizationConfigRepository
+    {
+        SystemLanguage GetDefaultLanguage();
+        SystemLanguage GetFallbackLanguage();
+        bool ShouldAutoDetectSystemLanguage();
+        bool ShouldShowMissingKeys();
+        bool ShouldLogLanguageChanges();
+        bool ShouldValidateKeysOnStart();
+        bool ShouldPreloadStringDatabase();
+        bool ShouldCacheTranslations();
+    }
+    
+    public class LocalizationConfigRepository : ILocalizationConfigRepository
+    {
+        private readonly LocalizationConfig localizationConfig;
+        
+        [Inject]
+        public LocalizationConfigRepository(LocalizationConfig localizationConfig)
+        {
+            this.localizationConfig = localizationConfig;
+            
+            if (localizationConfig == null)
+            {
+                Debug.LogError("[LocalizationConfigRepository] LocalizationConfig is null! Please assign it in GlobalConfigInstaller.");
+                return;
+            }
+            
+            Debug.Log("[LocalizationConfigRepository] Localization config repository initialized successfully!");
+        }
+        
+        public SystemLanguage GetDefaultLanguage()
+        {
+            return localizationConfig?.DefaultLanguage ?? SystemLanguage.English;
+        }
+        
+        public SystemLanguage GetFallbackLanguage()
+        {
+            return localizationConfig?.FallbackLanguage ?? SystemLanguage.English;
+        }
+        
+        public bool ShouldAutoDetectSystemLanguage()
+        {
+            return localizationConfig?.AutoDetectSystemLanguage ?? true;
+        }
+        
+        public bool ShouldShowMissingKeys()
+        {
+            return localizationConfig?.ShowMissingKeys ?? true;
+        }
+        
+        public bool ShouldLogLanguageChanges()
+        {
+            return localizationConfig?.LogLanguageChanges ?? true;
+        }
+        
+        public bool ShouldValidateKeysOnStart()
+        {
+            return localizationConfig?.ValidateKeysOnStart ?? false;
+        }
+        
+        public bool ShouldPreloadStringDatabase()
+        {
+            return localizationConfig?.PreloadStringDatabase ?? true;
+        }
+        
+        public bool ShouldCacheTranslations()
+        {
+            return localizationConfig?.CacheTranslations ?? true;
+        }
+    }
+}
