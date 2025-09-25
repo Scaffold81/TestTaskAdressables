@@ -89,7 +89,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioConfig: {fileID: 11400000, guid: 193f0a3ce85552f45a78b1b5dc864150, type: 2}
-  localizationConfig: {fileID: 11400000, guid: 4d854740105daeb4fb69ab2d2c5554a0, type: 2}
+  addressableConfig: {fileID: 11400000, guid: 36990504efe79674cbaa93656b8b8135, type: 2}
 --- !u!1 &5148869804224917412
 GameObject:
   m_ObjectHideFlags: 0

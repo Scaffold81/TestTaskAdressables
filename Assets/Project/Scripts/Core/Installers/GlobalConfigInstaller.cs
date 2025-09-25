@@ -1,4 +1,5 @@
 using Game.Config;
+using Project.Core.Config.Addressable;
 using UnityEngine;
 using Zenject;
 
@@ -12,6 +13,9 @@ namespace Game.Installers
     {
         [Header("Audio Configuration")]
         [SerializeField] private AudioConfig audioConfig;
+        
+        [Header("Addressable Configuration")]
+        [SerializeField] private AddressableConfig addressableConfig;
         
         /// <summary>
         /// Основной метод инсталляции зависимостей.
@@ -39,6 +43,17 @@ namespace Game.Installers
             {
                 Debug.LogError("[GlobalConfigInstaller] Audio config is not assigned! Please assign it in the inspector.");
             }
+            
+            // Bind Addressable config
+            if (addressableConfig != null)
+            {
+                Container.Bind<AddressableConfig>().FromInstance(addressableConfig).AsSingle();
+                Debug.Log("[GlobalConfigInstaller] Addressable config bound successfully");
+            }
+            else
+            {
+                Debug.LogError("[GlobalConfigInstaller] Addressable config is not assigned! Please assign it in the inspector.");
+            }
         }
         
         /// <summary>
@@ -50,7 +65,10 @@ namespace Game.Installers
             // Bind config repositories
             Container.Bind<IAudioConfigRepository>().To<AudioConfigRepository>().AsSingle();
             
-            // Config repositories bound successfully
+            // Bind Addressable config repository
+            Container.Bind<IAddressableConfigRepository>().To<AddressableConfigRepository>().AsSingle();
+            
+            Debug.Log("[GlobalConfigInstaller] Config repositories bound successfully");
         }
     }
 }

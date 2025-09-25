@@ -1,4 +1,5 @@
 using Game.Services;
+using Project.Core.Services.Addressable;
 using UnityEngine;
 using Zenject;
 
@@ -17,6 +18,7 @@ namespace Game.Installers
         public override void InstallBindings()
         {
             BindCoreServices();
+            BindAddressableServices();
         }
 
         /// <summary>
@@ -37,6 +39,21 @@ namespace Game.Installers
             Container.Bind<ILocalizationService>().To<UnityLocalizationService>().AsSingle();
             Container.Bind<IUIPageService>().To<UIPageService>().AsSingle();
             Container.Bind<ISceneManagerService>().To<SceneManagerService>().AsSingle();
+        }
+        
+        /// <summary>
+        /// Привязывает сервисы Addressables.
+        /// Binds Addressable services.
+        /// </summary>
+        private void BindAddressableServices()
+        {
+            // Bind catalog manager
+            Container.Bind<ICatalogManager>().To<CatalogManager>().AsSingle();
+            
+            // Bind main Addressable service
+            Container.Bind<IAddressableService>().To<AddressableService>().AsSingle().NonLazy();
+            
+            Debug.Log("[ProjectServiceInstaller] Addressable services bound successfully");
         }
     }
 }

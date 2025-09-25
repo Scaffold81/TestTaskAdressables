@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Project.Core.Services.Addressable.Models;
+using Project.Core.Config.Addressable;
 using R3;
 
 namespace Project.Core.Services.Addressable
@@ -46,7 +47,7 @@ namespace Project.Core.Services.Addressable
     /// </summary>
     public class CatalogManager : ICatalogManager
     {
-        private readonly ContentUpdateSettings _settings;
+        private readonly IAddressableConfigRepository _configRepository;
         private readonly List<CatalogInfo> _loadedCatalogs = new List<CatalogInfo>();
         
         private readonly Subject<CatalogInfo> _catalogUpdatedSubject = new Subject<CatalogInfo>();
@@ -55,9 +56,9 @@ namespace Project.Core.Services.Addressable
         /// <summary>
         /// Constructor / Конструктор
         /// </summary>
-        public CatalogManager(ContentUpdateSettings settings)
+        public CatalogManager(IAddressableConfigRepository configRepository)
         {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _configRepository = configRepository ?? throw new ArgumentNullException(nameof(configRepository));
         }
         
         /// <summary>
@@ -71,13 +72,14 @@ namespace Project.Core.Services.Addressable
                 await InitializeMainCatalogAsync();
                 
                 // Initialize separate catalogs / Инициализировать отдельные каталоги
-                if (_settings.LevelsCatalog.IsSeparate)
+                var settings = _configRepository.GetSettings();
+                if (settings.ContentUpdate.LevelsCatalog.IsSeparate)
                 {
-                    await InitializeSeparateCatalogAsync(_settings.LevelsCatalog);
+                    await InitializeSeparateCatalogAsync(settings.ContentUpdate.LevelsCatalog);
                 }
                 
                 // Start automatic update checking if enabled / Запустить автоматическую проверку обновлений
-                if (_settings.EnableAutoUpdates && _settings.CheckUpdatesOnStartup)
+                if (settings.ContentUpdate.EnableAutoUpdates && settings.ContentUpdate.CheckUpdatesOnStartup)
                 {
                     _ = StartPeriodicUpdateCheckAsync();
                 }
@@ -215,13 +217,16 @@ namespace Project.Core.Services.Addressable
         /// </summary>
         private async UniTask StartPeriodicUpdateCheckAsync()
         {
-            var intervalMs = _settings.UpdateCheckIntervalMinutes * 60 * 1000;
+            var settings = _configRepository.GetSettings();
+            var intervalMs = settings.ContentUpdate.UpdateCheckIntervalMinutes * 60 * 1000;
             
             while (Application.isPlaying)
             {
                 await UniTask.Delay(intervalMs);
                 
-                if (_settings.EnableAutoUpdates)
+                // Re-get settings in case they changed
+                var currentSettings = _configRepository.GetSettings();
+                if (currentSettings.ContentUpdate.EnableAutoUpdates)
                 {
                     await CheckForUpdatesAsync();
                 }
