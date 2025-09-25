@@ -59,6 +59,13 @@ namespace Project.Core.Services.Addressable.Models
         [Range(50, 500)]
         public int MaxCacheSizeMB = 100;
         
+        [Header("Content Update Settings / Настройки обновления контента")]
+        
+        /// <summary>
+        /// Content update workflow settings / Настройки процесса обновления контента
+        /// </summary>
+        public ContentUpdateSettings ContentUpdate = new ContentUpdateSettings();
+        
         [Header("Performance Settings / Настройки производительности")]
         
         /// <summary>
@@ -77,6 +84,13 @@ namespace Project.Core.Services.Addressable.Models
         /// Enable diagnostic logging / Включить диагностические логи
         /// </summary>
         public bool EnableDiagnosticLogging = true;
+        
+        [Header("Platform Settings / Платформенные настройки")]
+        
+        /// <summary>
+        /// Platform-specific settings / Платформо-специфичные настройки
+        /// </summary>
+        public PlatformSettings Platform = new PlatformSettings();
         
         /// <summary>
         /// Get current platform budget / Получить бюджет для текущей платформы
