@@ -153,7 +153,7 @@ namespace Project.Testing
                 }
                 
                 // Load scene additively for testing
-                await _addressableService.LoadSceneAsync(sceneKey, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+                await _addressableService.LoadSceneAsync(sceneKey);
                 
                 UpdateStatus($"✓ Scene '{sceneKey}' loaded successfully");
             }
