@@ -105,7 +105,7 @@ namespace Project.Editor.Addressable
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(group.groupName, EditorStyles.boldLabel);
             
-            var statusColor = group.includeInBuild ? Color.green : Color.orange;
+            var statusColor = group.includeInBuild ? Color.green : new Color(1f, 0.5f, 0f); // orange
             var statusText = group.includeInBuild ? "LOCAL" : "REMOTE";
             
             var originalColor = GUI.color;
@@ -295,10 +295,10 @@ namespace Project.Editor.Addressable
                 // Set compression
                 bundledSchema.Compression = groupInfo.compression switch
                 {
-                    BundleCompressionMode.None => UnityEngine.BuildCompression.Uncompressed,
-                    BundleCompressionMode.LZ4 => UnityEngine.BuildCompression.LZ4,
-                    BundleCompressionMode.LZMA => UnityEngine.BuildCompression.LZMA,
-                    _ => UnityEngine.BuildCompression.LZ4
+                    BundleCompressionMode.None => BundledAssetGroupSchema.BundleCompressionMode.Uncompressed,
+                    BundleCompressionMode.LZ4 => BundledAssetGroupSchema.BundleCompressionMode.LZ4,
+                    BundleCompressionMode.LZMA => BundledAssetGroupSchema.BundleCompressionMode.LZMA,
+                    _ => BundledAssetGroupSchema.BundleCompressionMode.LZ4
                 };
                 
                 // Set include in build
