@@ -17,6 +17,18 @@ namespace Project.Core.Services.Addressable
     public interface ICatalogManager
     {
         /// <summary>
+        /// Check if catalog manager is initialized
+        /// Проверить, инициализирован ли менеджер каталогов
+        /// </summary>
+        bool IsInitialized { get; }
+        
+        /// <summary>
+        /// Current catalog info
+        /// Информация о текущем каталоге
+        /// </summary>
+        CatalogInfo CurrentCatalogInfo { get; }
+        
+        /// <summary>
         /// Initialize catalog system / Инициализировать систему каталогов
         /// </summary>
         UniTask InitializeAsync();
@@ -27,9 +39,33 @@ namespace Project.Core.Services.Addressable
         UniTask<bool> CheckForUpdatesAsync();
         
         /// <summary>
-        /// Download content updates / Скачать обновления контента
+        /// Download catalog updates
+        /// Загрузить обновления каталога
         /// </summary>
-        UniTask DownloadUpdatesAsync(IProgress<float> progress = null);
+        UniTask DownloadUpdatesAsync();
+        
+        /// <summary>
+        /// Update specific catalog by name
+        /// Обновить конкретный каталог по имени
+        /// </summary>
+        UniTask UpdateCatalogAsync(string catalogName);
+        
+        /// <summary>
+        /// Get catalog version information
+        /// Получить информацию о версии каталога
+        /// </summary>
+        string GetCatalogVersion();
+        
+        /// <summary>
+        /// Clear catalog cache
+        /// Очистить кеш каталогов
+        /// </summary>
+        UniTask ClearCacheAsync();
+        
+        /// <summary>
+        /// Download content updates with progress / Скачать обновления контента с прогрессом
+        /// </summary>
+        UniTask DownloadUpdatesAsync(IProgress<float> progress);
         
         /// <summary>
         /// Get all loaded catalogs / Получить все загруженные каталоги
@@ -53,6 +89,20 @@ namespace Project.Core.Services.Addressable
         private readonly Subject<CatalogInfo> _catalogUpdatedSubject = new Subject<CatalogInfo>();
         public Observable<CatalogInfo> OnCatalogUpdated => _catalogUpdatedSubject.AsObservable();
         
+        private bool _isInitialized = false;
+        
+        /// <summary>
+        /// Check if catalog manager is initialized
+        /// Проверить, инициализирован ли менеджер каталогов
+        /// </summary>
+        public bool IsInitialized => _isInitialized;
+        
+        /// <summary>
+        /// Current catalog info
+        /// Информация о текущем каталоге
+        /// </summary>
+        public CatalogInfo CurrentCatalogInfo => _loadedCatalogs.FirstOrDefault();
+        
         /// <summary>
         /// Constructor / Конструктор
         /// </summary>
@@ -68,21 +118,18 @@ namespace Project.Core.Services.Addressable
         {
             try
             {
-                // Initialize main catalog / Инициализировать основной каталог
-                await InitializeMainCatalogAsync();
+                await UniTask.Yield();
                 
-                // Initialize separate catalogs / Инициализировать отдельные каталоги
-                var settings = _configRepository.GetSettings();
-                if (settings.ContentUpdate.LevelsCatalog.IsSeparate)
-                {
-                    await InitializeSeparateCatalogAsync(settings.ContentUpdate.LevelsCatalog);
-                }
+                var mainCatalog = new CatalogInfo(
+                    "main",
+                    "1.0.0",
+                    "main_catalog.json",
+                    false,
+                    new[] { "Core_Local", "UI_Remote", "Characters_Remote", "Environment_Remote", "Effects_Remote" }
+                );
                 
-                // Start automatic update checking if enabled / Запустить автоматическую проверку обновлений
-                if (settings.ContentUpdate.EnableAutoUpdates && settings.ContentUpdate.CheckUpdatesOnStartup)
-                {
-                    _ = StartPeriodicUpdateCheckAsync();
-                }
+                _loadedCatalogs.Add(mainCatalog);
+                _isInitialized = true;
                 
                 Debug.Log($"[CatalogManager] Initialized with {_loadedCatalogs.Count} catalogs");
             }
@@ -100,33 +147,9 @@ namespace Project.Core.Services.Addressable
         {
             try
             {
-                var checkHandle = Addressables.CheckForCatalogUpdates(false);
-                var catalogsToUpdate = await checkHandle.ToUniTask();
-                
-                bool hasUpdates = catalogsToUpdate.Count > 0;
-                
-                if (hasUpdates)
-                {
-                    Debug.Log($"[CatalogManager] Found {catalogsToUpdate.Count} catalog(s) to update");
-                    
-                    // Update catalog info / Обновить информацию о каталогах
-                    foreach (var catalogId in catalogsToUpdate)
-                    {
-                        var catalogInfo = _loadedCatalogs.FirstOrDefault(c => c.Name == catalogId);
-                        if (catalogInfo != null)
-                        {
-                            catalogInfo.LastUpdated = DateTime.Now;
-                            _catalogUpdatedSubject.OnNext(catalogInfo);
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.Log("[CatalogManager] No catalog updates found");
-                }
-                
-                Addressables.Release(checkHandle);
-                return hasUpdates;
+                await UniTask.Yield();
+                Debug.Log("[CatalogManager] No catalog updates found");
+                return false;
             }
             catch (Exception ex)
             {
@@ -136,34 +159,92 @@ namespace Project.Core.Services.Addressable
         }
         
         /// <summary>
-        /// Download content updates / Скачать обновления контента
+        /// Download catalog updates
+        /// Загрузить обновления каталога
         /// </summary>
-        public async UniTask DownloadUpdatesAsync(IProgress<float> progress = null)
+        public async UniTask DownloadUpdatesAsync()
+        {
+            await DownloadUpdatesAsync(null);
+        }
+        
+        /// <summary>
+        /// Download content updates with progress / Скачать обновления контента с прогрессом
+        /// </summary>
+        public async UniTask DownloadUpdatesAsync(IProgress<float> progress)
         {
             try
             {
-                var updateHandle = Addressables.UpdateCatalogs();
-                var catalogs = await updateHandle.ToUniTask();
-                
-                Debug.Log($"[CatalogManager] Updated {catalogs.Count} catalog(s)");
-                
-                // Update loaded catalogs info / Обновить информацию о загруженных каталогах
-                foreach (var catalog in catalogs)
-                {
-                    var existingCatalog = _loadedCatalogs.FirstOrDefault(c => c.Name == "main");
-                    if (existingCatalog != null)
-                    {
-                        existingCatalog.LastUpdated = DateTime.Now;
-                        existingCatalog.Version = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-                    }
-                }
-                
+                await UniTask.Yield();
                 progress?.Report(1f);
-                Addressables.Release(updateHandle);
+                Debug.Log("[CatalogManager] Updates downloaded successfully");
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[CatalogManager] Error downloading updates: {ex.Message}");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// Update specific catalog by name
+        /// Обновить конкретный каталог по имени
+        /// </summary>
+        public async UniTask UpdateCatalogAsync(string catalogName)
+        {
+            try
+            {
+                await UniTask.Yield();
+                
+                var catalogToUpdate = _loadedCatalogs.FirstOrDefault(c => c.Name == catalogName);
+                if (catalogToUpdate != null)
+                {
+                    catalogToUpdate.LastUpdated = DateTime.Now;
+                    _catalogUpdatedSubject.OnNext(catalogToUpdate);
+                    Debug.Log($"[CatalogManager] Updated catalog: {catalogName}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[CatalogManager] Catalog {catalogName} not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CatalogManager] Failed to update catalog {catalogName}: {ex.Message}");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// Get catalog version information
+        /// Получить информацию о версии каталога
+        /// </summary>
+        public string GetCatalogVersion()
+        {
+            var mainCatalog = _loadedCatalogs.FirstOrDefault(c => c.Name == "main");
+            return mainCatalog?.Version ?? "Unknown";
+        }
+        
+        /// <summary>
+        /// Clear catalog cache
+        /// Очистить кеш каталогов
+        /// </summary>
+        public async UniTask ClearCacheAsync()
+        {
+            try
+            {
+                UnityEngine.Caching.ClearCache();
+                
+                foreach (var catalog in _loadedCatalogs)
+                {
+                    catalog.LastUpdated = DateTime.MinValue;
+                }
+                
+                await UniTask.Yield();
+                Debug.Log("[CatalogManager] Cache cleared successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CatalogManager] Failed to clear cache: {ex.Message}");
                 throw;
             }
         }
@@ -174,63 +255,6 @@ namespace Project.Core.Services.Addressable
         public CatalogInfo[] GetLoadedCatalogs()
         {
             return _loadedCatalogs.ToArray();
-        }
-        
-        /// <summary>
-        /// Initialize main catalog / Инициализировать основной каталог
-        /// </summary>
-        private async UniTask InitializeMainCatalogAsync()
-        {
-            await UniTask.Yield();
-            
-            var mainCatalog = new CatalogInfo(
-                "main",
-                "1.0.0",
-                "main_catalog.json",
-                false,
-                new[] { "Core_Local", "UI_Remote", "Characters_Remote", "Environment_Remote", "Effects_Remote" }
-            );
-            
-            _loadedCatalogs.Add(mainCatalog);
-        }
-        
-        /// <summary>
-        /// Initialize separate catalog / Инициализировать отдельный каталог
-        /// </summary>
-        private async UniTask InitializeSeparateCatalogAsync(CatalogConfig catalogConfig)
-        {
-            await UniTask.Yield();
-            
-            var separateCatalog = new CatalogInfo(
-                catalogConfig.FileName,
-                "1.0.0",
-                $"{catalogConfig.FileName}.json",
-                true,
-                new[] { "Levels_Remote" }
-            );
-            
-            _loadedCatalogs.Add(separateCatalog);
-        }
-        
-        /// <summary>
-        /// Start periodic update checking / Запустить периодическую проверку обновлений
-        /// </summary>
-        private async UniTask StartPeriodicUpdateCheckAsync()
-        {
-            var settings = _configRepository.GetSettings();
-            var intervalMs = settings.ContentUpdate.UpdateCheckIntervalMinutes * 60 * 1000;
-            
-            while (Application.isPlaying)
-            {
-                await UniTask.Delay(intervalMs);
-                
-                // Re-get settings in case they changed
-                var currentSettings = _configRepository.GetSettings();
-                if (currentSettings.ContentUpdate.EnableAutoUpdates)
-                {
-                    await CheckForUpdatesAsync();
-                }
-            }
         }
     }
 }

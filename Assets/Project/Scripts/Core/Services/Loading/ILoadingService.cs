@@ -11,14 +11,19 @@ namespace Project.Core.Services.Loading
     public interface ILoadingService
     {
         /// <summary>
-        /// Show loading screen with title / Показать экран загрузки с заголовком
+        /// Show loading screen with title and initial progress / Показать экран загрузки с заголовком и начальным прогрессом
         /// </summary>
-        void ShowProgress(string title, string status = "");
+        void ShowProgress(string title, string status = "", float progress = 0f);
         
         /// <summary>
         /// Update loading progress / Обновить прогресс загрузки
         /// </summary>
-        void UpdateProgress(float progress, string status = "");
+        void UpdateProgress(string status, float progress);
+        
+        /// <summary>
+        /// Update loading status without changing progress / Обновить статус загрузки без изменения прогресса
+        /// </summary>
+        void UpdateStatus(string status);
         
         /// <summary>
         /// Hide loading screen / Скрыть экран загрузки
@@ -36,19 +41,24 @@ namespace Project.Core.Services.Loading
         UniTask<T> ShowProgressAsync<T>(UniTask<T> task, string title, string status = "");
         
         /// <summary>
-        /// Observable for progress updates / Observable для обновлений прогресса
+        /// Observable for loading state (true/false) / Observable для состояния загрузки (true/false)
         /// </summary>
-        Observable<ProgressData> OnProgressUpdated { get; }
+        ReadOnlyReactiveProperty<bool> IsLoading { get; }
         
         /// <summary>
-        /// Observable for loading state changes / Observable для изменений состояния загрузки
+        /// Observable for progress updates (0.0-1.0) / Observable для обновлений прогресса (0.0-1.0)
         /// </summary>
-        Observable<bool> OnLoadingStateChanged { get; }
+        ReadOnlyReactiveProperty<float> LoadingProgress { get; }
         
         /// <summary>
-        /// Check if loading is currently active / Проверить, активна ли сейчас загрузка
+        /// Observable for loading title / Observable для заголовка загрузки
         /// </summary>
-        bool IsLoading { get; }
+        ReadOnlyReactiveProperty<string> LoadingTitle { get; }
+        
+        /// <summary>
+        /// Observable for loading status / Observable для статуса загрузки
+        /// </summary>
+        ReadOnlyReactiveProperty<string> LoadingStatus { get; }
     }
     
     /// <summary>

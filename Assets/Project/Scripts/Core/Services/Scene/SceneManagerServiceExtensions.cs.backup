@@ -1,0 +1,167 @@
+using System;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using Game.Services;
+using Project.Core.Services.Addressable;
+using Project.Core.Services.Loading;
+
+namespace Game.Services
+{
+    /// <summary>
+    /// Extension methods for SceneManagerService integration with Addressables
+    /// Методы расширения для интеграции SceneManagerService с Addressables
+    /// </summary>
+    public static class SceneManagerServiceExtensions
+    {
+        /// <summary>
+        /// Load Addressable scene with progress tracking
+        /// Загрузить Addressable сцену с отслеживанием прогресса
+        /// </summary>
+        public static async UniTask LoadAddressableSceneAsync(
+            this ISceneManagerService sceneManagerService,
+            string sceneKey,
+            IAddressableService addressableService,
+            ILoadingService loadingService = null)
+        {
+            if (addressableService == null)
+            {
+                Debug.LogError("[SceneManagerServiceExtensions] AddressableService is null");
+                return;
+            }
+
+            try
+            {
+                // Show loading if service is available
+                if (loadingService != null)
+                {
+                    loadingService.ShowProgress("Loading Scene", $"Preparing {sceneKey}...", 0f);
+                }
+
+                // Preload scene dependencies if needed
+                var downloadSize = await addressableService.GetDownloadSizeAsync(sceneKey);
+                
+                if (downloadSize > 0)
+                {
+                    Debug.Log($"[SceneManagerServiceExtensions] Downloading {downloadSize / (1024f * 1024f):F1} MB for scene {sceneKey}");
+                    await addressableService.DownloadDependenciesWithProgressAsync(
+                        new[] { sceneKey }, loadingService, "Downloading Scene Content");
+                }
+
+                // Load the scene through Addressables
+                await addressableService.LoadSceneWithProgressAsync(sceneKey, loadingService, "Loading Scene");
+                
+                Debug.Log($"[SceneManagerServiceExtensions] Successfully loaded Addressable scene: {sceneKey}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SceneManagerServiceExtensions] Failed to load Addressable scene {sceneKey}: {ex.Message}");
+                
+                if (loadingService != null)
+                {
+                    loadingService.UpdateProgress($"Failed to load scene: {ex.Message}", 1f);
+                }
+                
+                throw;
+            }
+            finally
+            {
+                // Hide loading screen after a brief delay
+                if (loadingService != null)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(1f));
+                    loadingService.HideProgress();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Preload scene dependencies with progress
+        /// Предзагрузить зависимости сцены с прогрессом
+        /// </summary>
+        public static async UniTask PreloadSceneDependenciesAsync(
+            this ISceneManagerService sceneManagerService,
+            string sceneKey,
+            IAddressableService addressableService,
+            ILoadingService loadingService = null)
+        {
+            if (addressableService == null) return;
+
+            try
+            {
+                var downloadSize = await addressableService.GetDownloadSizeAsync(sceneKey);
+                
+                if (downloadSize > 0)
+                {
+                    Debug.Log($"[SceneManagerServiceExtensions] Preloading {downloadSize / (1024f * 1024f):F1} MB for scene {sceneKey}");
+                    
+                    await addressableService.DownloadDependenciesWithProgressAsync(
+                        new[] { sceneKey }, loadingService, "Preloading Scene Content");
+                }
+                else
+                {
+                    Debug.Log($"[SceneManagerServiceExtensions] Scene {sceneKey} dependencies already cached");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SceneManagerServiceExtensions] Failed to preload scene dependencies for {sceneKey}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load multiple scenes with batch progress tracking
+        /// Загрузить несколько сцен с пакетным отслеживанием прогресса
+        /// </summary>
+        public static async UniTask LoadMultipleScenesAsync(
+            this ISceneManagerService sceneManagerService,
+            string[] sceneKeys,
+            IAddressableService addressableService,
+            ILoadingService loadingService = null)
+        {
+            if (addressableService == null || sceneKeys == null || sceneKeys.Length == 0) return;
+
+            try
+            {
+                if (loadingService != null)
+                {
+                    loadingService.ShowProgress("Loading Scenes", $"Preparing {sceneKeys.Length} scenes...", 0f);
+                }
+
+                // Download all dependencies first
+                var totalDownloadSize = await addressableService.GetDownloadSizeAsync(sceneKeys);
+                
+                if (totalDownloadSize > 0)
+                {
+                    await addressableService.DownloadDependenciesWithProgressAsync(
+                        sceneKeys, loadingService, "Downloading Scene Content");
+                }
+
+                // Load scenes sequentially with progress updates
+                for (int i = 0; i < sceneKeys.Length; i++)
+                {
+                    var sceneKey = sceneKeys[i];
+                    var progress = (float)i / sceneKeys.Length;
+                    
+                    if (loadingService != null)
+                    {
+                        loadingService.UpdateProgress($"Loading {sceneKey}... ({i + 1}/{sceneKeys.Length})", progress);
+                    }
+                    
+                    await addressableService.LoadSceneAsync(sceneKey);
+                }
+                
+                if (loadingService != null)
+                {
+                    loadingService.UpdateProgress($"All {sceneKeys.Length} scenes loaded successfully!", 1f);
+                }
+                
+                Debug.Log($"[SceneManagerServiceExtensions] Successfully loaded {sceneKeys.Length} Addressable scenes");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[SceneManagerServiceExtensions] Failed to load multiple scenes: {ex.Message}");
+                throw;
+            }
+        }
+    }
+}

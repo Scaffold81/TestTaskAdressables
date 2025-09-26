@@ -11,6 +11,7 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.SceneManagement;
 using R3;
 using Project.Core.Services.Addressable.Models;
+using Project.Core.Services.Addressable.Memory;
 using Project.Core.Config.Addressable;
 
 namespace Project.Core.Services.Addressable

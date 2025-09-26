@@ -1,7 +1,7 @@
 using Game.Services;
 using Project.Core.Services.Addressable;
+using Project.Core.Services.Addressable.Memory;
 using Project.Core.Services.Loading;
-using Project.Core.Services.Integration;
 using UnityEngine;
 using Zenject;
 
@@ -49,6 +49,9 @@ namespace Game.Installers
         /// </summary>
         private void BindAddressableServices()
         {
+            // Bind memory manager
+            Container.Bind<IAddressableMemoryManager>().To<AddressableMemoryManager>().AsSingle();
+            
             // Bind catalog manager
             Container.Bind<ICatalogManager>().To<CatalogManager>().AsSingle();
             
@@ -57,9 +60,6 @@ namespace Game.Installers
             
             // Bind Loading service
             Container.Bind<ILoadingService>().To<LoadingService>().AsSingle();
-            
-            // Bind integration layer
-            Container.Bind<AddressableLoadingIntegration>().AsSingle().NonLazy();
             
             Debug.Log("[ProjectServiceInstaller] Addressable services bound successfully");
         }

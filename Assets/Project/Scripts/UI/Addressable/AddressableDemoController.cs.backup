@@ -1,0 +1,271 @@
+using System;
+using UnityEngine;
+using UnityEngine.UI;
+using Zenject;
+using Cysharp.Threading.Tasks;
+using Project.Core.Services.Addressable;
+using Project.Core.Services.Loading;
+
+namespace Project.UI.Addressable
+{
+    /// <summary>
+    /// Demo controller for testing Addressable system functionality
+    /// Демо-контроллер для тестирования функциональности системы Addressables
+    /// </summary>
+    public class AddressableDemoController : MonoBehaviour
+    {
+        [Header("Demo Buttons")]
+        [SerializeField] private Button loadSpriteButton;
+        [SerializeField] private Button loadPrefabButton;
+        [SerializeField] private Button loadSceneButton;
+        [SerializeField] private Button showDevOverlayButton;
+        [SerializeField] private Button clearCacheButton;
+        
+        [Header("Demo Assets")]
+        [SerializeField] private string testSpriteKey = "ui_main_button";
+        [SerializeField] private string testPrefabKey = "characters_player_prefab";
+        [SerializeField] private string testSceneKey = "levels_level01_scene";
+        
+        [Header("Display")]
+        [SerializeField] private Image spriteDisplay;
+        [SerializeField] private Transform prefabSpawnPoint;
+        
+        private IAddressableService _addressableService;
+        private ILoadingService _loadingService;
+        private DevOverlayView _devOverlay;
+        
+        [Inject]
+        public void Construct(
+            IAddressableService addressableService,
+            ILoadingService loadingService)
+        {
+            _addressableService = addressableService;
+            _loadingService = loadingService;
+        }
+        
+        private void Start()
+        {
+            SetupButtons();
+            FindDevOverlay();
+        }
+        
+        /// <summary>
+        /// Setup button event handlers
+        /// Настроить обработчики кнопок
+        /// </summary>
+        private void SetupButtons()
+        {
+            if (loadSpriteButton != null)
+            {
+                loadSpriteButton.onClick.RemoveAllListeners();
+                loadSpriteButton.onClick.AddListener(() => LoadTestSprite().Forget());
+            }
+            
+            if (loadPrefabButton != null)
+            {
+                loadPrefabButton.onClick.RemoveAllListeners();
+                loadPrefabButton.onClick.AddListener(() => LoadTestPrefab().Forget());
+            }
+            
+            if (loadSceneButton != null)
+            {
+                loadSceneButton.onClick.RemoveAllListeners();
+                loadSceneButton.onClick.AddListener(() => LoadTestScene().Forget());
+            }
+            
+            if (showDevOverlayButton != null)
+            {
+                showDevOverlayButton.onClick.RemoveAllListeners();
+                showDevOverlayButton.onClick.AddListener(() => ToggleDevOverlay());
+            }
+            
+            if (clearCacheButton != null)
+            {
+                clearCacheButton.onClick.RemoveAllListeners();
+                clearCacheButton.onClick.AddListener(() => ClearCache());
+            }
+        }
+        
+        /// <summary>
+        /// Find DevOverlayView in scene
+        /// Найти DevOverlayView в сцене
+        /// </summary>
+        private void FindDevOverlay()
+        {
+            _devOverlay = FindObjectOfType<DevOverlayView>();
+        }
+        
+        /// <summary>
+        /// Load test sprite asset
+        /// Загрузить тестовый спрайт
+        /// </summary>
+        private async UniTaskVoid LoadTestSprite()
+        {
+            try
+            {
+                _loadingService.ShowProgress("Loading Sprite", $"Loading {testSpriteKey}...", 0f);
+                
+                var sprite = await _addressableService.LoadAssetAsync<Sprite>(testSpriteKey);
+                
+                if (sprite != null && spriteDisplay != null)
+                {
+                    spriteDisplay.sprite = sprite;
+                    spriteDisplay.color = Color.white;
+                    _loadingService.UpdateProgress("Sprite loaded successfully!", 1f);
+                }
+                else
+                {
+                    _loadingService.UpdateProgress("Failed to load sprite", 1f);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AddressableDemoController] Failed to load sprite: {ex.Message}");
+                _loadingService.UpdateProgress($"Error: {ex.Message}", 1f);
+            }
+            finally
+            {
+                // Hide progress after delay
+                await UniTask.Delay(TimeSpan.FromSeconds(2));
+                _loadingService.HideProgress();
+            }
+        }
+        
+        /// <summary>
+        /// Load test prefab asset
+        /// Загрузить тестовый префаб
+        /// </summary>
+        private async UniTaskVoid LoadTestPrefab()
+        {
+            try
+            {
+                _loadingService.ShowProgress("Loading Prefab", $"Loading {testPrefabKey}...", 0f);
+                
+                var prefab = await _addressableService.LoadAssetAsync<GameObject>(testPrefabKey);
+                
+                if (prefab != null)
+                {
+                    // Clear previous prefab instances
+                    if (prefabSpawnPoint != null)
+                    {
+                        foreach (Transform child in prefabSpawnPoint)
+                        {
+                            Destroy(child.gameObject);
+                        }
+                        
+                        // Instantiate new prefab
+                        var instance = Instantiate(prefab, prefabSpawnPoint);
+                        instance.name = $"{testPrefabKey}_Instance";
+                    }
+                    
+                    _loadingService.UpdateProgress("Prefab loaded and instantiated!", 1f);
+                }
+                else
+                {
+                    _loadingService.UpdateProgress("Failed to load prefab", 1f);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AddressableDemoController] Failed to load prefab: {ex.Message}");
+                _loadingService.UpdateProgress($"Error: {ex.Message}", 1f);
+            }
+            finally
+            {
+                await UniTask.Delay(TimeSpan.FromSeconds(2));
+                _loadingService.HideProgress();
+            }
+        }
+        
+        /// <summary>
+        /// Load test scene
+        /// Загрузить тестовую сцену
+        /// </summary>
+        private async UniTaskVoid LoadTestScene()
+        {
+            try
+            {
+                _loadingService.ShowProgress("Loading Scene", $"Loading {testSceneKey}...", 0f);
+                
+                await _addressableService.LoadSceneAsync(testSceneKey);
+                
+                _loadingService.UpdateProgress("Scene loaded successfully!", 1f);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AddressableDemoController] Failed to load scene: {ex.Message}");
+                _loadingService.UpdateProgress($"Error: {ex.Message}", 1f);
+            }
+            finally
+            {
+                await UniTask.Delay(TimeSpan.FromSeconds(2));
+                _loadingService.HideProgress();
+            }
+        }
+        
+        /// <summary>
+        /// Toggle development overlay visibility
+        /// Переключить видимость панели разработчика
+        /// </summary>
+        private void ToggleDevOverlay()
+        {
+            if (_devOverlay != null)
+            {
+                // Use show/hide methods instead of accessing canvasGroup directly
+                _devOverlay.Hide();
+            }
+            else
+            {
+                Debug.LogWarning("[AddressableDemoController] DevOverlayView not found in scene");
+            }
+        }
+        
+        /// <summary>
+        /// Clear Addressables cache
+        /// Очистить кэш Addressables
+        /// </summary>
+        private void ClearCache()
+        {
+            _loadingService.ShowProgress("Clearing Cache", "Clearing all cached content...", 0f);
+            
+            // Clear Unity cache
+            UnityEngine.Caching.ClearCache();
+            
+            // Release all loaded assets
+            _addressableService.ReleaseAllAssets();
+            
+            // Clear sprite display
+            if (spriteDisplay != null)
+            {
+                spriteDisplay.sprite = null;
+                spriteDisplay.color = Color.clear;
+            }
+            
+            // Clear prefab instances
+            if (prefabSpawnPoint != null)
+            {
+                foreach (Transform child in prefabSpawnPoint)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+            
+            _loadingService.UpdateProgress("Cache cleared successfully!", 1f);
+            
+            // Hide progress after delay
+            UniTask.Delay(TimeSpan.FromSeconds(2))
+                .ContinueWith(() => _loadingService.HideProgress())
+                .Forget();
+        }
+        
+        private void OnDestroy()
+        {
+            // Cleanup any remaining references
+            if (loadSpriteButton != null) loadSpriteButton.onClick.RemoveAllListeners();
+            if (loadPrefabButton != null) loadPrefabButton.onClick.RemoveAllListeners();
+            if (loadSceneButton != null) loadSceneButton.onClick.RemoveAllListeners();
+            if (showDevOverlayButton != null) showDevOverlayButton.onClick.RemoveAllListeners();
+            if (clearCacheButton != null) clearCacheButton.onClick.RemoveAllListeners();
+        }
+    }
+}

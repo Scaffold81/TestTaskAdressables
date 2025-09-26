@@ -1,0 +1,127 @@
+using DG.Tweening;
+using R3;
+using UnityEngine;
+
+namespace Project.UI.Base
+{
+    /// <summary>
+    /// Base class for UI views with show/hide functionality
+    /// Базовый класс для UI представлений с функциональностью показа/скрытия
+    /// </summary>
+    [RequireComponent(typeof(CanvasGroup))]
+    public class BaseUIView : MonoBehaviour
+    {
+        [SerializeField] protected CanvasGroup canvasGroup;
+        [SerializeField] protected float animationDuration = 0.3f;
+        
+        private readonly ReactiveProperty<bool> _isVisible = new ReactiveProperty<bool>();
+        
+        /// <summary>
+        /// Observable for visibility state / Observable для состояния видимости
+        /// </summary>
+        public ReadOnlyReactiveProperty<bool> IsVisible => _isVisible.ToReadOnlyReactiveProperty();
+        
+        protected virtual void Awake()
+        {
+            if (canvasGroup == null)
+                canvasGroup = GetComponent<CanvasGroup>();
+                
+            // Initialize as hidden
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+            _isVisible.Value = false;
+        }
+        
+        /// <summary>
+        /// Show view with animation / Показать представление с анимацией
+        /// </summary>
+        public virtual void Show()
+        {
+            if (_isVisible.Value) return;
+            
+            gameObject.SetActive(true);
+            _isVisible.Value = true;
+            
+            canvasGroup.DOFade(1f, animationDuration)
+                .OnComplete(() =>
+                {
+                    canvasGroup.interactable = true;
+                    canvasGroup.blocksRaycasts = true;
+                    OnViewShown();
+                });
+        }
+        
+        /// <summary>
+        /// Hide view with animation / Скрыть представление с анимацией
+        /// </summary>
+        public virtual void Hide()
+        {
+            if (!_isVisible.Value) return;
+            
+            _isVisible.Value = false;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+            
+            canvasGroup.DOFade(0f, animationDuration)
+                .OnComplete(() =>
+                {
+                    gameObject.SetActive(false);
+                    OnViewHidden();
+                });
+        }
+        
+        /// <summary>
+        /// Toggle view visibility / Переключить видимость представления
+        /// </summary>
+        public virtual void Toggle()
+        {
+            if (_isVisible.Value)
+                Hide();
+            else
+                Show();
+        }
+        
+        /// <summary>
+        /// Set visibility without animation / Установить видимость без анимации
+        /// </summary>
+        public virtual void SetVisible(bool visible)
+        {
+            if (_isVisible.Value == visible) return;
+            
+            _isVisible.Value = visible;
+            gameObject.SetActive(visible);
+            
+            canvasGroup.alpha = visible ? 1f : 0f;
+            canvasGroup.interactable = visible;
+            canvasGroup.blocksRaycasts = visible;
+            
+            if (visible)
+                OnViewShown();
+            else
+                OnViewHidden();
+        }
+        
+        /// <summary>
+        /// Called when view is shown / Вызывается при показе представления
+        /// </summary>
+        protected virtual void OnViewShown()
+        {
+            // Override in derived classes
+        }
+        
+        /// <summary>
+        /// Called when view is hidden / Вызывается при скрытии представления
+        /// </summary>
+        protected virtual void OnViewHidden()
+        {
+            // Override in derived classes
+        }
+        
+        protected virtual void OnDestroy()
+        {
+            _isVisible?.Dispose();
+            canvasGroup?.DOKill();
+        }
+    }
+}

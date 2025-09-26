@@ -1,0 +1,419 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using R3;
+using Zenject;
+using Cysharp.Threading.Tasks;
+using Project.Core.Services.Addressable;
+using Project.Core.Services.Addressable.Memory;
+using Project.Core.Services.Loading;
+using Project.Core.Config.Addressable;
+using Game.UI;
+
+namespace Project.UI.Addressable
+{
+    /// <summary>
+    /// Development overlay for debugging Addressables system
+    /// Панель отладки для системы Addressables
+    /// </summary>
+    public class DevOverlayView : PageBase
+    {
+        [Header("UI Components")]
+        [SerializeField] private ScrollRect scrollRect;
+        [SerializeField] private TextMeshProUGUI infoText;
+        [SerializeField] private Button refreshButton;
+        [SerializeField] private Button clearCacheButton;
+        [SerializeField] private Button switchProfileButton;
+        [SerializeField] private Button downloadAllButton;
+        [SerializeField] private Button showMemoryInfoButton;
+        [SerializeField] private Toggle autoRefreshToggle;
+        
+        [Header("Profile Switching")]
+        [SerializeField] private TMP_Dropdown profileDropdown;
+        
+        [Header("Settings")]
+        [SerializeField] private float autoRefreshInterval = 2f;
+        
+        private IAddressableService _addressableService;
+        private IAddressableMemoryManager _memoryManager;
+        private ILoadingService _loadingService;
+        private AddressableConfig _config;
+        
+        private CompositeDisposable _disposables = new CompositeDisposable();
+        private bool _autoRefreshEnabled;
+        private StringBuilder _infoBuilder = new StringBuilder();
+        
+        [Inject]
+        public void Construct(
+            IAddressableService addressableService,
+            IAddressableMemoryManager memoryManager,
+            ILoadingService loadingService,
+            AddressableConfig config)
+        {
+            _addressableService = addressableService;
+            _memoryManager = memoryManager;
+            _loadingService = loadingService;
+            _config = config;
+        }
+        
+        /// <summary>
+        /// Show overlay and setup UI
+        /// Показать панель и настроить UI
+        /// </summary>
+        public override void Show(float showTime = 0.1f)
+        {
+            base.Show(showTime);
+            SetupUI();
+            RefreshInfo();
+            SetupAutoRefresh();
+        }
+        
+        /// <summary>
+        /// Hide overlay and cleanup
+        /// Скрыть панель и очистить ресурсы
+        /// </summary>
+        public override void Hide(float hideTime = 0.1f)
+        {
+            base.Hide(hideTime);
+            _disposables.Dispose();
+            _disposables = new CompositeDisposable();
+        }
+        
+        /// <summary>
+        /// Setup UI event handlers
+        /// Настроить обработчики событий UI
+        /// </summary>
+        private void SetupUI()
+        {
+            // Refresh button
+            if (refreshButton != null)
+            {
+                refreshButton.onClick.RemoveAllListeners();
+                refreshButton.onClick.AddListener(() => RefreshInfo());
+            }
+            
+            // Clear cache button
+            if (clearCacheButton != null)
+            {
+                clearCacheButton.onClick.RemoveAllListeners();
+                clearCacheButton.onClick.AddListener(() => ClearCache());
+            }
+            
+            // Switch profile button
+            if (switchProfileButton != null)
+            {
+                switchProfileButton.onClick.RemoveAllListeners();
+                switchProfileButton.onClick.AddListener(() => SwitchProfile());
+            }
+            
+            // Download all button
+            if (downloadAllButton != null)
+            {
+                downloadAllButton.onClick.RemoveAllListeners();
+                downloadAllButton.onClick.AddListener(() => DownloadAllGroups().Forget());
+            }
+            
+            // Show memory info button
+            if (showMemoryInfoButton != null)
+            {
+                showMemoryInfoButton.onClick.RemoveAllListeners();
+                showMemoryInfoButton.onClick.AddListener(() => ShowMemoryInfo());
+            }
+            
+            // Auto refresh toggle
+            if (autoRefreshToggle != null)
+            {
+                autoRefreshToggle.onValueChanged.RemoveAllListeners();
+                autoRefreshToggle.onValueChanged.AddListener(enabled => SetAutoRefresh(enabled));
+            }
+            
+            // Profile dropdown
+            SetupProfileDropdown();
+        }
+        
+        /// <summary>
+        /// Setup profile dropdown with available profiles
+        /// Настроить выпадающий список с доступными профилями
+        /// </summary>
+        private void SetupProfileDropdown()
+        {
+            if (profileDropdown == null || _config == null) return;
+            
+            var profiles = new List<string> { "Development", "Staging", "Production" };
+            profileDropdown.ClearOptions();
+            profileDropdown.AddOptions(profiles);
+            
+            // Set current profile
+            string currentProfile = _config.Settings.DevelopmentProfile;
+            int currentIndex = profiles.IndexOf(currentProfile);
+            if (currentIndex >= 0)
+                profileDropdown.value = currentIndex;
+            
+            profileDropdown.onValueChanged.RemoveAllListeners();
+            profileDropdown.onValueChanged.AddListener(index =>
+            {
+                if (index >= 0 && index < profiles.Count)
+                {
+                    SwitchToProfile(profiles[index]);
+                }
+            });
+        }
+        
+        /// <summary>
+        /// Setup auto-refresh functionality
+        /// Настроить автоматическое обновление
+        /// </summary>
+        private void SetupAutoRefresh()
+        {
+            Observable.Interval(TimeSpan.FromSeconds(autoRefreshInterval))
+                .Where(_ => _autoRefreshEnabled && isShowed.Value)
+                .Subscribe(_ => RefreshInfo())
+                .AddTo(_disposables);
+        }
+        
+        /// <summary>
+        /// Refresh all debug information
+        /// Обновить всю отладочную информацию
+        /// </summary>
+        private void RefreshInfo()
+        {
+            if (infoText == null) return;
+            
+            _infoBuilder.Clear();
+            AppendSystemInfo();
+            AppendLoadedAssets();
+            AppendMemoryInfo();
+            AppendCacheInfo();
+            AppendProfileInfo();
+            
+            infoText.text = _infoBuilder.ToString();
+        }
+        
+        /// <summary>
+        /// Append system information
+        /// Добавить системную информацию
+        /// </summary>
+        private void AppendSystemInfo()
+        {
+            _infoBuilder.AppendLine("=== SYSTEM INFO ===");
+            _infoBuilder.AppendLine($"Initialized: {_addressableService.IsInitialized}");
+            _infoBuilder.AppendLine($"Platform: {Application.platform}");
+            _infoBuilder.AppendLine($"Unity Version: {Application.unityVersion}");
+            _infoBuilder.AppendLine($"Time: {DateTime.Now:HH:mm:ss}");
+            _infoBuilder.AppendLine();
+        }
+        
+        /// <summary>
+        /// Append loaded assets information
+        /// Добавить информацию о загруженных ассетах
+        /// </summary>
+        private void AppendLoadedAssets()
+        {
+            _infoBuilder.AppendLine("=== LOADED ASSETS ===");
+            
+            var loadedAssets = _addressableService.LoadedAssets;
+            _infoBuilder.AppendLine($"Total Loaded: {loadedAssets.Count}");
+            
+            foreach (var kvp in loadedAssets)
+            {
+                var assetInfo = kvp.Value;
+                _infoBuilder.AppendLine($"• {kvp.Key} ({assetInfo.GetType().Name})");
+            }
+            
+            _infoBuilder.AppendLine();
+        }
+        
+        /// <summary>
+        /// Append memory information
+        /// Добавить информацию о памяти
+        /// </summary>
+        private void AppendMemoryInfo()
+        {
+            _infoBuilder.AppendLine("=== MEMORY INFO ===");
+            
+            // Unity memory stats
+            long totalMemory = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemory();
+            long reservedMemory = UnityEngine.Profiling.Profiler.GetTotalReservedMemory();
+            
+            _infoBuilder.AppendLine($"Total Memory: {FormatBytes(totalMemory)}");
+            _infoBuilder.AppendLine($"Reserved Memory: {FormatBytes(reservedMemory)}");
+            
+            // Addressable memory tracking (if available)
+            if (_memoryManager != null)
+            {
+                _infoBuilder.AppendLine($"Addressable Handles: {_memoryManager.GetActiveHandleCount()}");
+            }
+            
+            _infoBuilder.AppendLine();
+        }
+        
+        /// <summary>
+        /// Append cache information
+        /// Добавить информацию о кэше
+        /// </summary>
+        private void AppendCacheInfo()
+        {
+            _infoBuilder.AppendLine("=== CACHE INFO ===");
+            
+            var cache = UnityEngine.Caching.defaultCache;
+            _infoBuilder.AppendLine($"Cache Path: {cache.path}");
+            _infoBuilder.AppendLine($"Cache Size: {FormatBytes(cache.spaceOccupied)}");
+            _infoBuilder.AppendLine($"Cache Limit: {FormatBytes(cache.maximumAvailableStorageSpace)}");
+            
+            _infoBuilder.AppendLine();
+        }
+        
+        /// <summary>
+        /// Append current profile information
+        /// Добавить информацию о текущем профиле
+        /// </summary>
+        private void AppendProfileInfo()
+        {
+            _infoBuilder.AppendLine("=== PROFILE INFO ===");
+            
+            if (_config != null)
+            {
+                _infoBuilder.AppendLine($"Development Profile: {_config.Settings.DevelopmentProfile}");
+                _infoBuilder.AppendLine($"Production Profile: {_config.Settings.ProductionProfile}");
+                _infoBuilder.AppendLine($"Enable Retry: {_config.Settings.EnableRetry}");
+                _infoBuilder.AppendLine($"Max Retries: {_config.Settings.MaxRetries}");
+                _infoBuilder.AppendLine($"Enable Caching: {_config.Settings.EnableCaching}");
+            }
+        }
+        
+        /// <summary>
+        /// Format bytes to human-readable string
+        /// Форматировать байты в читаемую строку
+        /// </summary>
+        private string FormatBytes(long bytes)
+        {
+            const long KB = 1024;
+            const long MB = KB * 1024;
+            const long GB = MB * 1024;
+            
+            if (bytes >= GB)
+                return $"{bytes / (float)GB:F2} GB";
+            if (bytes >= MB)
+                return $"{bytes / (float)MB:F2} MB";
+            if (bytes >= KB)
+                return $"{bytes / (float)KB:F2} KB";
+            
+            return $"{bytes} B";
+        }
+        
+        /// <summary>
+        /// Clear Addressables cache
+        /// Очистить кэш Addressables
+        /// </summary>
+        private void ClearCache()
+        {
+            if (_loadingService != null)
+            {
+                _loadingService.ShowProgress("Clearing Cache", "Clearing Addressables cache...", 0f);
+            }
+            
+            UnityEngine.Caching.ClearCache();
+            _addressableService.ReleaseAllAssets();
+            
+            if (_loadingService != null)
+            {
+                _loadingService.UpdateProgress("Cache cleared successfully", 1f);
+                
+                // Hide progress after delay
+                Observable.Timer(TimeSpan.FromSeconds(1))
+                    .Subscribe(_ => _loadingService.HideProgress())
+                    .AddTo(_disposables);
+            }
+            
+            RefreshInfo();
+        }
+        
+        /// <summary>
+        /// Switch to next profile (for testing)
+        /// Переключить на следующий профиль (для тестирования)
+        /// </summary>
+        private void SwitchProfile()
+        {
+            if (profileDropdown != null)
+            {
+                int nextIndex = (profileDropdown.value + 1) % profileDropdown.options.Count;
+                profileDropdown.value = nextIndex;
+            }
+        }
+        
+        /// <summary>
+        /// Switch to specific profile
+        /// Переключить на конкретный профиль
+        /// </summary>
+        private void SwitchToProfile(string profileName)
+        {
+            Debug.Log($"[DevOverlayView] Switching to profile: {profileName}");
+            // Note: Profile switching would require Addressables reinitialization
+        }
+        
+        /// <summary>
+        /// Download all remote groups
+        /// Загрузить все удаленные группы
+        /// </summary>
+        private async UniTaskVoid DownloadAllGroups()
+        {
+            try
+            {
+                if (_loadingService != null)
+                {
+                    _loadingService.ShowProgress("Downloading", "Downloading all remote content...", 0f);
+                }
+                
+                var groups = new[] { "ui", "character", "environment", "effect", "level" };
+                await _addressableService.DownloadDependenciesWithProgressAsync(
+                    groups, _loadingService, "Downloading All Content");
+                
+                RefreshInfo();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DevOverlayView] Download failed: {ex.Message}");
+            }
+            finally
+            {
+                if (_loadingService != null)
+                {
+                    _loadingService.HideProgress();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Show detailed memory information
+        /// Показать детальную информацию о памяти
+        /// </summary>
+        private void ShowMemoryInfo()
+        {
+            if (_memoryManager != null)
+            {
+                var memoryReport = _memoryManager.GenerateMemoryReport();
+                Debug.Log($"[DevOverlayView] Memory Report:\n{memoryReport}");
+            }
+        }
+        
+        /// <summary>
+        /// Set auto-refresh state
+        /// Установить состояние автообновления
+        /// </summary>
+        private void SetAutoRefresh(bool enabled)
+        {
+            _autoRefreshEnabled = enabled;
+            if (enabled)
+                RefreshInfo();
+        }
+        
+        private void OnDestroy()
+        {
+            _disposables?.Dispose();
+        }
+    }
+}

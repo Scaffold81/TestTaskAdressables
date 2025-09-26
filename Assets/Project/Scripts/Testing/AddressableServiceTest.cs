@@ -3,7 +3,6 @@ using Zenject;
 using Project.Core.Services.Addressable;
 using Project.Core.Config.Addressable;
 using Project.Core.Services.Loading;
-using Project.Core.Services.Extensions;
 using Cysharp.Threading.Tasks;
 
 namespace Project.Testing
@@ -52,7 +51,7 @@ namespace Project.Testing
             if (_loadingService != null)
             {
                 Debug.Log("[AddressableServiceTest] ✅ LoadingService injected successfully");
-                Debug.Log($"[AddressableServiceTest] Loading service active: {_loadingService.IsLoading}");
+                Debug.Log($"[AddressableServiceTest] Loading service active: {_loadingService.IsLoading.CurrentValue}");
             }
             else
             {
@@ -112,7 +111,7 @@ namespace Project.Testing
             for (int i = 0; i <= 10; i++)
             {
                 float progress = i / 10f;
-                _loadingService.UpdateProgress(progress, $"Step {i}/10");
+                _loadingService.UpdateProgress($"Step {i}/10", progress);
                 await UniTask.Delay(200);
             }
             
@@ -142,11 +141,10 @@ namespace Project.Testing
                 {
                     var testKey = coreKeys[0];
                     
-                    // Test with loading UI
-                    await _addressableService.LoadAssetWithProgressAsync<UnityEngine.Object>(
-                        testKey, _loadingService, $"Loading {testKey}");
+                    // Test basic asset loading
+                    await _addressableService.LoadAssetAsync<UnityEngine.Object>(testKey);
                     
-                    Debug.Log($"[AddressableServiceTest] Successfully loaded {testKey} with progress UI");
+                    Debug.Log($"[AddressableServiceTest] Successfully loaded {testKey}");
                 }
                 else
                 {
@@ -179,8 +177,7 @@ namespace Project.Testing
                 
                 if (coreKeys.Length > 0)
                 {
-                    await _addressableService.DownloadDependenciesWithProgressAsync(
-                        coreKeys, _loadingService, "Downloading Core Assets");
+                    await _addressableService.DownloadDependenciesAsync(coreKeys);
                     
                     Debug.Log("[AddressableServiceTest] Dependencies download test completed");
                 }

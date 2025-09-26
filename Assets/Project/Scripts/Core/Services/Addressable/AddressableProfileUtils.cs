@@ -42,8 +42,9 @@ namespace Project.Core.Services.Addressable
         {
 #if UNITY_EDITOR
             // Check for custom define symbols / Проверить пользовательские символы
-            var defines = UnityEditor.PlayerSettings.GetScriptingDefineSymbolsForGroup(
+            var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(
                 UnityEditor.BuildTargetGroup.Standalone);
+            var defines = UnityEditor.PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
             
             if (defines.Contains("FORCE_PRODUCTION"))
                 return ProfileNames.PRODUCTION;

@@ -1,0 +1,61 @@
+using System;
+using Cysharp.Threading.Tasks;
+using Project.Core.Services.Addressable.Models;
+
+namespace Project.Core.Services.Addressable
+{
+    /// <summary>
+    /// Interface for managing Addressable catalogs and content updates
+    /// Интерфейс для управления каталогами Addressables и обновлениями контента
+    /// </summary>
+    public interface ICatalogManager
+    {
+        /// <summary>
+        /// Check if catalog manager is initialized
+        /// Проверить, инициализирован ли менеджер каталогов
+        /// </summary>
+        bool IsInitialized { get; }
+        
+        /// <summary>
+        /// Current catalog info
+        /// Информация о текущем каталоге
+        /// </summary>
+        CatalogInfo CurrentCatalogInfo { get; }
+        
+        /// <summary>
+        /// Initialize catalog manager
+        /// Инициализировать менеджер каталогов
+        /// </summary>
+        UniTask InitializeAsync();
+        
+        /// <summary>
+        /// Check for catalog updates
+        /// Проверить наличие обновлений каталога
+        /// </summary>
+        UniTask<bool> CheckForUpdatesAsync();
+        
+        /// <summary>
+        /// Download catalog updates
+        /// Загрузить обновления каталога
+        /// </summary>
+        UniTask DownloadUpdatesAsync();
+        
+        /// <summary>
+        /// Update specific catalog by name
+        /// Обновить конкретный каталог по имени
+        /// </summary>
+        UniTask UpdateCatalogAsync(string catalogName);
+        
+        /// <summary>
+        /// Get catalog version information
+        /// Получить информацию о версии каталога
+        /// </summary>
+        string GetCatalogVersion();
+        
+        /// <summary>
+        /// Clear catalog cache
+        /// Очистить кеш каталогов
+        /// </summary>
+        UniTask ClearCacheAsync();
+    }
+}

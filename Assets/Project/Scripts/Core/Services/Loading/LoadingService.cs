@@ -11,73 +11,82 @@ namespace Project.Core.Services.Loading
     /// </summary>
     public class LoadingService : ILoadingService, IDisposable
     {
-        private readonly Subject<ProgressData> _progressSubject = new Subject<ProgressData>();
-        private readonly Subject<bool> _loadingStateSubject = new Subject<bool>();
+        private readonly ReactiveProperty<bool> _isLoading = new ReactiveProperty<bool>(false);
+        private readonly ReactiveProperty<float> _loadingProgress = new ReactiveProperty<float>(0f);
+        private readonly ReactiveProperty<string> _loadingTitle = new ReactiveProperty<string>("");
+        private readonly ReactiveProperty<string> _loadingStatus = new ReactiveProperty<string>("");
         
         private readonly CompositeDisposable _disposables = new CompositeDisposable();
-        
-        private bool _isLoading = false;
-        private ProgressData _currentProgress;
 
         /// <summary>
-        /// Observable for progress updates / Observable для обновлений прогресса
+        /// Observable for loading state (true/false) / Observable для состояния загрузки (true/false)
         /// </summary>
-        public Observable<ProgressData> OnProgressUpdated => _progressSubject.AsObservable();
+        public ReadOnlyReactiveProperty<bool> IsLoading => _isLoading.ToReadOnlyReactiveProperty();
         
         /// <summary>
-        /// Observable for loading state changes / Observable для изменений состояния загрузки
+        /// Observable for progress updates (0.0-1.0) / Observable для обновлений прогресса (0.0-1.0)
         /// </summary>
-        public Observable<bool> OnLoadingStateChanged => _loadingStateSubject.AsObservable();
+        public ReadOnlyReactiveProperty<float> LoadingProgress => _loadingProgress.ToReadOnlyReactiveProperty();
         
         /// <summary>
-        /// Check if loading is currently active / Проверить, активна ли сейчас загрузка
+        /// Observable for loading title / Observable для заголовка загрузки
         /// </summary>
-        public bool IsLoading => _isLoading;
+        public ReadOnlyReactiveProperty<string> LoadingTitle => _loadingTitle.ToReadOnlyReactiveProperty();
+        
+        /// <summary>
+        /// Observable for loading status / Observable для статуса загрузки
+        /// </summary>
+        public ReadOnlyReactiveProperty<string> LoadingStatus => _loadingStatus.ToReadOnlyReactiveProperty();
 
         /// <summary>
         /// Constructor / Конструктор
         /// </summary>
         public LoadingService()
         {
-            // Setup automatic disposal / Настроить автоматическое освобождение ресурсов
-            OnProgressUpdated.Subscribe(progress => 
+            // Setup logging / Настроить логирование
+            _isLoading.Subscribe(isLoading => 
             {
-                Debug.Log($"[LoadingService] {progress}");
+                Debug.Log($"[LoadingService] Loading state changed: {isLoading}");
+            }).AddTo(_disposables);
+            
+            _loadingProgress.Subscribe(progress => 
+            {
+                Debug.Log($"[LoadingService] Progress: {progress:P1}");
             }).AddTo(_disposables);
         }
 
         /// <summary>
-        /// Show loading screen with title / Показать экран загрузки с заголовком
+        /// Show loading screen with title and initial progress / Показать экран загрузки с заголовком и начальным прогрессом
         /// </summary>
-        public void ShowProgress(string title, string status = "")
+        public void ShowProgress(string title, string status = "", float progress = 0f)
         {
-            if (_isLoading)
-            {
-                Debug.LogWarning("[LoadingService] Loading is already active, updating current progress");
-            }
-
-            SetLoadingState(true);
-            UpdateProgressInternal(0f, title, status);
+            _loadingTitle.Value = title ?? "";
+            _loadingStatus.Value = status ?? "";
+            _loadingProgress.Value = Mathf.Clamp01(progress);
+            _isLoading.Value = true;
             
-            // Show loading UI if available / Показать UI загрузки, если доступен
-            ShowLoadingUI();
-            
-            Debug.Log($"[LoadingService] Started loading: {title}");
+            Debug.Log($"[LoadingService] Started loading: {title} ({progress:P1})");
         }
 
         /// <summary>
         /// Update loading progress / Обновить прогресс загрузки
         /// </summary>
-        public void UpdateProgress(float progress, string status = "")
+        public void UpdateProgress(string status, float progress)
         {
-            if (!_isLoading)
-            {
-                Debug.LogWarning("[LoadingService] Trying to update progress when loading is not active");
-                return;
-            }
+            _loadingStatus.Value = status ?? "";
+            _loadingProgress.Value = Mathf.Clamp01(progress);
+            
+            Debug.Log($"[LoadingService] Progress updated: {status} ({progress:P1})");
+        }
 
-            progress = Mathf.Clamp01(progress);
-            UpdateProgressInternal(progress, _currentProgress.Title, status);
+        /// <summary>
+        /// Update loading status without changing progress / Обновить статус загрузки без изменения прогресса
+        /// </summary>
+        public void UpdateStatus(string status)
+        {
+            _loadingStatus.Value = status ?? "";
+            
+            Debug.Log($"[LoadingService] Status updated: {status}");
         }
 
         /// <summary>
@@ -85,19 +94,11 @@ namespace Project.Core.Services.Loading
         /// </summary>
         public void HideProgress()
         {
-            if (!_isLoading)
-            {
-                Debug.LogWarning("[LoadingService] Trying to hide progress when loading is not active");
-                return;
-            }
-
-            SetLoadingState(false);
-            UpdateProgressInternal(1f, _currentProgress.Title, "Completed");
+            _isLoading.Value = false;
+            _loadingProgress.Value = 1f;
+            _loadingStatus.Value = "Completed";
             
-            // Hide loading UI / Скрыть UI загрузки
-            HideLoadingUI();
-            
-            Debug.Log("[LoadingService] Loading completed");
+            Debug.Log("[LoadingService] Loading completed and hidden");
         }
 
         /// <summary>
@@ -105,19 +106,23 @@ namespace Project.Core.Services.Loading
         /// </summary>
         public async UniTask ShowProgressAsync(UniTask task, string title, string status = "")
         {
-            ShowProgress(title, status);
+            ShowProgress(title, status, 0f);
             
             try
             {
                 await task;
+                UpdateProgress("Completed", 1f);
             }
             catch (Exception ex)
             {
+                UpdateProgress($"Failed: {ex.Message}", 1f);
                 Debug.LogError($"[LoadingService] Task failed during loading: {ex.Message}");
                 throw;
             }
             finally
             {
+                // Small delay to show completion
+                await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
                 HideProgress();
             }
         }
@@ -127,74 +132,25 @@ namespace Project.Core.Services.Loading
         /// </summary>
         public async UniTask<T> ShowProgressAsync<T>(UniTask<T> task, string title, string status = "")
         {
-            ShowProgress(title, status);
+            ShowProgress(title, status, 0f);
             
             try
             {
                 var result = await task;
+                UpdateProgress("Completed", 1f);
                 return result;
             }
             catch (Exception ex)
             {
+                UpdateProgress($"Failed: {ex.Message}", 1f);
                 Debug.LogError($"[LoadingService] Task failed during loading: {ex.Message}");
                 throw;
             }
             finally
             {
+                // Small delay to show completion
+                await UniTask.Delay(TimeSpan.FromSeconds(0.5f));
                 HideProgress();
-            }
-        }
-
-        /// <summary>
-        /// Update progress internal implementation / Внутренняя реализация обновления прогресса
-        /// </summary>
-        private void UpdateProgressInternal(float progress, string title, string status)
-        {
-            _currentProgress = new ProgressData(progress, title, status);
-            _progressSubject.OnNext(_currentProgress);
-        }
-
-        /// <summary>
-        /// Set loading state / Установить состояние загрузки
-        /// </summary>
-        private void SetLoadingState(bool isLoading)
-        {
-            if (_isLoading == isLoading) return;
-            
-            _isLoading = isLoading;
-            _loadingStateSubject.OnNext(_isLoading);
-        }
-
-        /// <summary>
-        /// Show loading UI / Показать UI загрузки
-        /// </summary>
-        private void ShowLoadingUI()
-        {
-            try
-            {
-                // Try to show loading UI through UIPageService
-                // This will be implemented when LoadingProgressView is created
-                Debug.Log("[LoadingService] Loading UI would be shown here");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[LoadingService] Could not show loading UI: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Hide loading UI / Скрыть UI загрузки
-        /// </summary>
-        private void HideLoadingUI()
-        {
-            try
-            {
-                // Try to hide loading UI through UIPageService
-                Debug.Log("[LoadingService] Loading UI would be hidden here");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[LoadingService] Could not hide loading UI: {ex.Message}");
             }
         }
 
@@ -204,8 +160,10 @@ namespace Project.Core.Services.Loading
         public void Dispose()
         {
             _disposables?.Dispose();
-            _progressSubject?.Dispose();
-            _loadingStateSubject?.Dispose();
+            _isLoading?.Dispose();
+            _loadingProgress?.Dispose();
+            _loadingTitle?.Dispose();
+            _loadingStatus?.Dispose();
         }
     }
 }
