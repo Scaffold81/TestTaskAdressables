@@ -2,6 +2,9 @@ using UnityEngine;
 using Zenject;
 using Project.Core.Services.Addressable;
 using Project.Core.Config.Addressable;
+using Project.Core.Services.Loading;
+using Project.Core.Services.Extensions;
+using Cysharp.Threading.Tasks;
 
 namespace Project.Testing
 {
@@ -13,6 +16,7 @@ namespace Project.Testing
     {
         [Inject] private IAddressableService _addressableService;
         [Inject] private IAddressableConfigRepository _configRepository;
+        [Inject] private ILoadingService _loadingService;
         
         private void Start()
         {
@@ -44,6 +48,16 @@ namespace Project.Testing
             {
                 Debug.LogError("[AddressableServiceTest] ❌ ConfigRepository is null");
             }
+            
+            if (_loadingService != null)
+            {
+                Debug.Log("[AddressableServiceTest] ✅ LoadingService injected successfully");
+                Debug.Log($"[AddressableServiceTest] Loading service active: {_loadingService.IsLoading}");
+            }
+            else
+            {
+                Debug.LogError("[AddressableServiceTest] ❌ LoadingService is null");
+            }
         }
         
         /// <summary>
@@ -74,6 +88,110 @@ namespace Project.Testing
                 {
                     Debug.Log($"[AddressableServiceTest] Core asset key: {key}");
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Test loading service functionality / Тест функциональности сервиса загрузки
+        /// </summary>
+        [ContextMenu("Test Loading Service")]
+        private async void TestLoadingService()
+        {
+            if (_loadingService == null)
+            {
+                Debug.LogError("[AddressableServiceTest] LoadingService not available");
+                return;
+            }
+            
+            Debug.Log("[AddressableServiceTest] Testing loading service...");
+            
+            // Test basic loading UI
+            _loadingService.ShowProgress("Test Loading", "Starting test...");
+            await UniTask.Delay(1000);
+            
+            for (int i = 0; i <= 10; i++)
+            {
+                float progress = i / 10f;
+                _loadingService.UpdateProgress(progress, $"Step {i}/10");
+                await UniTask.Delay(200);
+            }
+            
+            _loadingService.HideProgress();
+            Debug.Log("[AddressableServiceTest] Loading service test completed");
+        }
+        
+        /// <summary>
+        /// Test asset loading with progress / Тест загрузки ресурсов с прогрессом
+        /// </summary>
+        [ContextMenu("Test Asset Loading with Progress")]
+        private async void TestAssetLoadingWithProgress()
+        {
+            if (_addressableService == null || _loadingService == null)
+            {
+                Debug.LogError("[AddressableServiceTest] Required services not available");
+                return;
+            }
+            
+            Debug.Log("[AddressableServiceTest] Testing asset loading with progress...");
+            
+            try
+            {
+                // Test download size check
+                var coreKeys = _configRepository.GetCoreAssetKeys();
+                if (coreKeys.Length > 0)
+                {
+                    var testKey = coreKeys[0];
+                    
+                    // Test with loading UI
+                    await _addressableService.LoadAssetWithProgressAsync<UnityEngine.Object>(
+                        testKey, _loadingService, $"Loading {testKey}");
+                    
+                    Debug.Log($"[AddressableServiceTest] Successfully loaded {testKey} with progress UI");
+                }
+                else
+                {
+                    Debug.LogWarning("[AddressableServiceTest] No core asset keys available for testing");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[AddressableServiceTest] Asset loading test failed: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Test download dependencies with progress / Тест скачивания зависимостей с прогрессом
+        /// </summary>
+        [ContextMenu("Test Download Dependencies")]
+        private async void TestDownloadDependencies()
+        {
+            if (_addressableService == null || _loadingService == null)
+            {
+                Debug.LogError("[AddressableServiceTest] Required services not available");
+                return;
+            }
+            
+            Debug.Log("[AddressableServiceTest] Testing download dependencies...");
+            
+            try
+            {
+                var coreKeys = _configRepository.GetCoreAssetKeys();
+                
+                if (coreKeys.Length > 0)
+                {
+                    await _addressableService.DownloadDependenciesWithProgressAsync(
+                        coreKeys, _loadingService, "Downloading Core Assets");
+                    
+                    Debug.Log("[AddressableServiceTest] Dependencies download test completed");
+                }
+                else
+                {
+                    Debug.LogWarning("[AddressableServiceTest] No asset keys available for download test");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[AddressableServiceTest] Download dependencies test failed: {ex.Message}");
             }
         }
     }

@@ -1,5 +1,7 @@
 using Game.Services;
 using Project.Core.Services.Addressable;
+using Project.Core.Services.Loading;
+using Project.Core.Services.Integration;
 using UnityEngine;
 using Zenject;
 
@@ -52,6 +54,12 @@ namespace Game.Installers
             
             // Bind main Addressable service
             Container.Bind<IAddressableService>().To<AddressableService>().AsSingle().NonLazy();
+            
+            // Bind Loading service
+            Container.Bind<ILoadingService>().To<LoadingService>().AsSingle();
+            
+            // Bind integration layer
+            Container.Bind<AddressableLoadingIntegration>().AsSingle().NonLazy();
             
             Debug.Log("[ProjectServiceInstaller] Addressable services bound successfully");
         }
