@@ -15,10 +15,10 @@ MonoBehaviour:
   m_DefaultGroup: 1311d37829e14154a8b630e0198af600
   m_currentHash:
     serializedVersion: 2
-    Hash: 00000000000000000000000000000000
+    Hash: 69773e6a5ae444bbe65a3961d41b97c5
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
-  m_CatalogRequestsTimeout: 0
+  m_CatalogRequestsTimeout: 60
   m_DisableCatalogUpdateOnStart: 0
   m_InternalIdNamingMode: 0
   m_InternalBundleIdMode: 1
@@ -34,7 +34,7 @@ MonoBehaviour:
   m_EnableJsonCatalog: 0
   m_NonRecursiveBuilding: 1
   m_CCDEnabled: 0
-  m_maxConcurrentWebRequests: 3
+  m_maxConcurrentWebRequests: 4
   m_UseUWRForLocalBundles: 0
   m_BundleTimeout: 0
   m_BundleRetryCount: 0
@@ -169,4 +169,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 84efbfc9c384b37469598f211052a303, type: 2}
   - {fileID: 11400000, guid: 7c7a0449c990f644e844420a21798cdf, type: 2}
   - {fileID: 11400000, guid: c09c090136ccc2b45a9a32148bdb09d2, type: 2}
-  m_ActiveProfileId: 0b115a1729824d14b8997812a59c47af
+  m_ActiveProfileId: 7f3da631bb19ecc4d9839d8a4938b8e5
