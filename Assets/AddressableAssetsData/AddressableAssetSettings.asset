@@ -15,7 +15,7 @@ MonoBehaviour:
   m_DefaultGroup: 1311d37829e14154a8b630e0198af600
   m_currentHash:
     serializedVersion: 2
-    Hash: f4d31e305a057c2723bdb6b96217f600
+    Hash: 00000000000000000000000000000000
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
   m_CatalogRequestsTimeout: 0
@@ -92,7 +92,7 @@ MonoBehaviour:
       - m_Id: 6f7c6dd0fdeaf6342a5746884b59db0d
         m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
       - m_Id: 8277e4eaac1390a40b05b27a110591f7
-        m_Value: <undefined>
+        m_Value: 'https://staging.yourcdn.com/[BuildTarget]'
       - m_Id: 887a9f1b7f7095d479ab0ed61f09a743
         m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
       - m_Id: a640a061657078645933dedb2524c686
@@ -106,7 +106,7 @@ MonoBehaviour:
       - m_Id: 6f7c6dd0fdeaf6342a5746884b59db0d
         m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
       - m_Id: 8277e4eaac1390a40b05b27a110591f7
-        m_Value: <undefined>
+        m_Value: 'http://localhost:8080/[BuildTarget]'
       - m_Id: 887a9f1b7f7095d479ab0ed61f09a743
         m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
       - m_Id: a640a061657078645933dedb2524c686
@@ -120,7 +120,7 @@ MonoBehaviour:
       - m_Id: 6f7c6dd0fdeaf6342a5746884b59db0d
         m_Value: '{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]'
       - m_Id: 8277e4eaac1390a40b05b27a110591f7
-        m_Value: <undefined>
+        m_Value: 'https://cdn.yourprod.com/[BuildTarget]'
       - m_Id: 887a9f1b7f7095d479ab0ed61f09a743
         m_Value: '[UnityEditor.EditorUserBuildSettings.activeBuildTarget]'
       - m_Id: a640a061657078645933dedb2524c686
