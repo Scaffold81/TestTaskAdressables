@@ -15,18 +15,28 @@ MonoBehaviour:
   m_GroupName: Core_Local
   m_GUID: 1311d37829e14154a8b630e0198af600
   m_SerializeEntries:
+  - m_GUID: 067faffa974fda24d8d84ebdae8823f1
+    m_Address: material_default
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4762974f1c9080e42b4963d374955c7f
+    m_Address: audio_click_sound
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8752d1f24cfd4a2459c281a32d20abaa
-    m_Address: Assets/AddressableAssets/Effects/explosion_particle.png
+    m_Address: explosion_particle
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8a08f751efbd79749a1487944a7e0469
-    m_Address: Assets/AddressableAssets/Core/ui_main_button.png
+    m_Address: ui_main_button
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cfa784dbe0a9b674f8b50d9a8d0ecc0f
-    m_Address: Assets/AddressableAssets/Characters/characters_test_prefab.prefab
+    m_Address: characters_test_prefab
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

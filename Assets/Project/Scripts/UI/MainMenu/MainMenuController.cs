@@ -97,7 +97,8 @@ namespace Project.UI.MainMenu
                 UpdateStatus("Downloading Core assets...");
                 UpdateProgress(0f, "Downloading Core");
                 
-                var coreKeys = new[] { "ui_main_button", "material_default", "audio_click_sound" };
+                // Используем реальные ключи из Core_Local
+                var coreKeys = new[] { "ui_main_button", "explosion_particle", "characters_test_prefab" };
                 var size = await _addressableService.GetDownloadSizeAsync(coreKeys);
                 
                 UpdateStatus($"Core size: {size / (1024f * 1024f):F2} MB");

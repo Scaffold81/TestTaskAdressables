@@ -14,7 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_GroupName: Levels_Remote
   m_GUID: 0579b0c664f17db4d8c77a9c541c8760
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 5de483796c67de14bafcd960086124ef
+    m_Address: levels_level02_scene
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d39d8e1e74cc6544dbafff060230f947
+    m_Address: levels_level01_scene
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 12e220ce81dbe3f498491236c88d2ecc, type: 2}
   m_SchemaSet:
