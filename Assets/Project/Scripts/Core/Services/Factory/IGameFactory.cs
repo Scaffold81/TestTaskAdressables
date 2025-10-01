@@ -1,22 +1,37 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Game.Services
 {
     /// <summary>
-    /// Интерфейс фабрики для создания игровых объектов.
-    /// Interface for factory that creates game objects.
+    /// Factory service for instantiating game objects through Addressables
+    /// Фабрика для создания игровых объектов через Addressables
     /// </summary>
     public interface IGameFactory
     {
         /// <summary>
-        /// Создает экземпляр объекта в указанной позиции.
-        /// Creates object instance at specified position.
+        /// Instantiate prefab by Addressable key / Создать префаб по ключу Addressable
         /// </summary>
-        /// <typeparam name="T">Тип объекта / Object type</typeparam>
-        /// <param name="prefab">Префаб / Prefab</param>
-        /// <param name="position">Позиция / Position</param>
-        /// <param name="parent">Родительский объект / Parent object</param>
-        /// <returns>Созданный объект / Created object</returns>
-        T Create<T>(T prefab, Vector3 position, Transform parent) where T : Object;
+        UniTask<GameObject> InstantiateAsync(string key, Transform parent = null);
+        
+        /// <summary>
+        /// Instantiate prefab at position / Создать префаб в позиции
+        /// </summary>
+        UniTask<GameObject> InstantiateAsync(string key, Vector3 position, Quaternion rotation, Transform parent = null);
+        
+        /// <summary>
+        /// Instantiate and get component / Создать и получить компонент
+        /// </summary>
+        UniTask<T> InstantiateAsync<T>(string key, Transform parent = null) where T : Component;
+        
+        /// <summary>
+        /// Destroy game object and release Addressable / Уничтожить объект и освободить Addressable
+        /// </summary>
+        void Destroy(GameObject gameObject);
+        
+        /// <summary>
+        /// Destroy with delay / Уничтожить с задержкой
+        /// </summary>
+        void Destroy(GameObject gameObject, float delay);
     }
 }

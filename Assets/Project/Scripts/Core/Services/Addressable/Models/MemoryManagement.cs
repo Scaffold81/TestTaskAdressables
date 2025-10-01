@@ -1,186 +1,131 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Project.Core.Services.Addressable.Models
 {
     /// <summary>
-    /// Memory management settings and statistics / Настройки управления памятью и статистика
+    /// Strategy for memory cleanup / Стратегия очистки памяти
     /// </summary>
-    [Serializable]
-    public class MemoryManagementData
+    public enum CleanupStrategy
     {
         /// <summary>
-        /// Memory budget in MB / Бюджет памяти в МБ
+        /// Aggressive cleanup - release all unused immediately
+        /// Агрессивная очистка - освобождать все неиспользуемое немедленно
         /// </summary>
-        public float MemoryBudgetMB = 512f;
+        Aggressive,
         
         /// <summary>
-        /// Warning threshold (0.0-1.0) / Порог предупреждения
+        /// Balanced cleanup - release after threshold
+        /// Балансированная очистка - освобождать после превышения порога
         /// </summary>
-        public float WarningThreshold = 0.8f;
+        Balanced,
         
         /// <summary>
-        /// Critical threshold for automatic cleanup / Критический порог для автоматической очистки
+        /// Conservative cleanup - keep cache as long as possible
+        /// Консервативная очистка - сохранять кеш как можно дольше
         /// </summary>
-        public float CriticalThreshold = 0.9f;
-        
+        Conservative
+    }
+    
+    /// <summary>
+    /// Memory management settings for Addressables
+    /// Настройки управления памятью для Addressables
+    /// </summary>
+    [Serializable]
+    public class MemoryManagement
+    {
         /// <summary>
         /// Enable automatic memory cleanup / Включить автоматическую очистку памяти
         /// </summary>
         public bool EnableAutoCleanup = true;
         
         /// <summary>
-        /// Cleanup check interval in seconds / Интервал проверки очистки в секундах
+        /// Memory threshold in MB for cleanup trigger / Порог памяти в МБ для запуска очистки
         /// </summary>
-        public float CleanupCheckInterval = 30f;
+        public int MemoryThresholdMB = 400;
         
         /// <summary>
-        /// Assets that should never be unloaded / Ресурсы, которые никогда не должны выгружаться
+        /// Cleanup strategy / Стратегия очистки
         /// </summary>
-        public List<string> ProtectedAssets = new List<string>();
-    }
-    
-    /// <summary>
-    /// Current memory usage statistics / Текущая статистика использования памяти
-    /// </summary>
-    [Serializable]
-    public struct MemoryStats
-    {
-        /// <summary>
-        /// Used memory in bytes / Используемая память в байтах
-        /// </summary>
-        public long UsedMemoryBytes;
+        public CleanupStrategy Strategy = CleanupStrategy.Balanced;
         
         /// <summary>
-        /// Total allocated memory in bytes / Общая выделенная память в байтах
+        /// Release assets on scene change / Освобождать ресурсы при смене сцены
         /// </summary>
-        public long AllocatedMemoryBytes;
+        public bool ReleaseOnSceneChange = true;
         
         /// <summary>
-        /// Number of loaded assets / Количество загруженных ресурсов
+        /// Unload unused assets after cleanup / Выгружать неиспользуемые ресурсы после очистки
         /// </summary>
-        public int LoadedAssetCount;
+        public bool UnloadUnusedAssets = true;
         
         /// <summary>
-        /// Number of cached handles / Количество кешированных handles
+        /// Run garbage collection after cleanup / Запускать сборку мусора после очистки
         /// </summary>
-        public int CachedHandleCount;
+        public bool ForceGCAfterCleanup = false;
         
         /// <summary>
-        /// Memory usage percentage (0.0-1.0) / Процент использования памяти
+        /// Time between automatic cleanups in seconds / Время между автоматическими очистками в секундах
         /// </summary>
-        public float UsagePercentage;
+        public int AutoCleanupIntervalSeconds = 60;
         
         /// <summary>
-        /// Timestamp of measurement / Временная метка измерения
+        /// Maximum cache age in hours / Максимальный возраст кеша в часах
         /// </summary>
-        public DateTime Timestamp;
+        public int MaxCacheAgeHours = 24;
         
         /// <summary>
-        /// Get used memory in MB / Получить используемую память в МБ
+        /// Track memory allocation per asset / Отслеживать выделение памяти для каждого ресурса
         /// </summary>
-        public float GetUsedMemoryMB() => UsedMemoryBytes / (1024f * 1024f);
+        public bool TrackMemoryPerAsset = true;
         
         /// <summary>
-        /// Get allocated memory in MB / Получить выделенную память в МБ
+        /// Get memory threshold in bytes / Получить порог памяти в байтах
         /// </summary>
-        public float GetAllocatedMemoryMB() => AllocatedMemoryBytes / (1024f * 1024f);
-        
-        /// <summary>
-        /// Check if memory usage is critical / Проверить, критично ли использование памяти
-        /// </summary>
-        public bool IsCritical(float threshold) => UsagePercentage >= threshold;
-        
-        /// <summary>
-        /// String representation / Строковое представление
-        /// </summary>
-        public override string ToString()
+        public long GetMemoryThresholdBytes()
         {
-            return $"Memory: {GetUsedMemoryMB():F1}MB ({UsagePercentage * 100:F1}%), Assets: {LoadedAssetCount}, Handles: {CachedHandleCount}";
-        }
-    }
-    
-    /// <summary>
-    /// Asset usage tracking data / Данные отслеживания использования ресурсов
-    /// </summary>
-    [Serializable]
-    public class AssetUsageData
-    {
-        /// <summary>
-        /// Asset key / Ключ ресурса
-        /// </summary>
-        public string Key;
-        
-        /// <summary>
-        /// Last access time / Время последнего доступа
-        /// </summary>
-        public DateTime LastAccessTime;
-        
-        /// <summary>
-        /// Access count / Количество обращений
-        /// </summary>
-        public int AccessCount;
-        
-        /// <summary>
-        /// Estimated memory size in bytes / Приблизительный размер в памяти в байтах
-        /// </summary>
-        public long EstimatedSizeBytes;
-        
-        /// <summary>
-        /// Is asset protected from auto-cleanup / Защищен ли ресурс от автоматической очистки
-        /// </summary>
-        public bool IsProtected;
-        
-        /// <summary>
-        /// Priority for cleanup (lower = cleaned first) / Приоритет для очистки (ниже = очищается первым)
-        /// </summary>
-        public int CleanupPriority;
-        
-        /// <summary>
-        /// Constructor / Конструктор
-        /// </summary>
-        public AssetUsageData(string key)
-        {
-            Key = key;
-            LastAccessTime = DateTime.Now;
-            AccessCount = 1;
-            EstimatedSizeBytes = 0;
-            IsProtected = false;
-            CleanupPriority = 0;
+            return (long)MemoryThresholdMB * 1024 * 1024;
         }
         
         /// <summary>
-        /// Update access information / Обновить информацию о доступе
+        /// Get cleanup interval as TimeSpan / Получить интервал очистки как TimeSpan
         /// </summary>
-        public void UpdateAccess()
+        public TimeSpan GetCleanupInterval()
         {
-            LastAccessTime = DateTime.Now;
-            AccessCount++;
+            return TimeSpan.FromSeconds(AutoCleanupIntervalSeconds);
         }
         
         /// <summary>
-        /// Get time since last access / Получить время с последнего доступа
+        /// Get max cache age as TimeSpan / Получить максимальный возраст кеша как TimeSpan
         /// </summary>
-        public TimeSpan GetTimeSinceLastAccess()
+        public TimeSpan GetMaxCacheAge()
         {
-            return DateTime.Now - LastAccessTime;
+            return TimeSpan.FromHours(MaxCacheAgeHours);
         }
         
         /// <summary>
-        /// Calculate cleanup score (higher = more likely to be cleaned) / Вычислить очки для очистки
+        /// Check if cleanup is needed based on current memory / Проверить, нужна ли очистка на основе текущей памяти
         /// </summary>
-        public float CalculateCleanupScore()
+        public bool ShouldCleanup(long currentMemoryBytes)
         {
-            if (IsProtected) return -1f; // Never cleanup protected assets
-            
-            var hoursSinceAccess = (float)GetTimeSinceLastAccess().TotalHours;
-            var sizeScore = EstimatedSizeBytes / (1024f * 1024f); // MB
-            var accessFrequency = AccessCount / Math.Max(1f, hoursSinceAccess);
-            
-            // Higher score = more likely to be cleaned up
-            // Factor in: time since access, size, low access frequency
-            return (hoursSinceAccess * sizeScore) / Math.Max(0.1f, accessFrequency);
+            if (!EnableAutoCleanup)
+                return false;
+                
+            return currentMemoryBytes > GetMemoryThresholdBytes();
+        }
+        
+        /// <summary>
+        /// Get cleanup priority multiplier based on strategy / Получить множитель приоритета очистки на основе стратегии
+        /// </summary>
+        public float GetCleanupPriorityMultiplier()
+        {
+            return Strategy switch
+            {
+                CleanupStrategy.Aggressive => 1.5f,
+                CleanupStrategy.Balanced => 1.0f,
+                CleanupStrategy.Conservative => 0.5f,
+                _ => 1.0f
+            };
         }
     }
 }

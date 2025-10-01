@@ -5,124 +5,82 @@ namespace Project.Core.Services.Addressable.Models
 {
     /// <summary>
     /// Platform-specific settings for Addressables
-    /// Платформо-специфичные настройки для Addressables
+    /// Специфичные для платформы настройки Addressables
     /// </summary>
     [Serializable]
     public class PlatformSettings
     {
-        [Header("WebGL Settings")]
+        /// <summary>
+        /// WebGL specific settings / Настройки для WebGL
+        /// </summary>
+        [Serializable]
+        public class WebGLSettings
+        {
+            public int MaxConcurrentRequests = 6;
+            public int CatalogDownloadTimeout = 30;
+            public bool DisableCatalogUpdateOnStart = false;
+            public bool EnableBrotliCompression = true;
+            public int FirstLoadBudgetMB = 30;
+        }
         
         /// <summary>
-        /// Maximum concurrent web requests for WebGL / Максимальное количество одновременных веб-запросов для WebGL
+        /// Android specific settings / Настройки для Android
         /// </summary>
-        [Range(1, 10)]
-        public int WebGLMaxConcurrentRequests = 6;
+        [Serializable]
+        public class AndroidSettings
+        {
+            public bool UseAssetDatabase = false;
+            public bool SimulateGroups = false;
+            public int MaxConcurrentRequests = 4;
+            public int FirstLoadBudgetMB = 15;
+            public bool UseArmV7 = false;
+            public bool UseArm64 = true;
+        }
         
         /// <summary>
-        /// Catalog download timeout for WebGL in seconds / Таймаут загрузки каталога для WebGL в секундах
+        /// iOS specific settings / Настройки для iOS
         /// </summary>
-        [Range(10, 120)]
-        public int WebGLCatalogTimeout = 30;
+        [Serializable]
+        public class IOSSettings
+        {
+            public int MaxConcurrentRequests = 4;
+            public int FirstLoadBudgetMB = 20;
+            public bool EnableOnDemandResources = false;
+        }
         
         /// <summary>
-        /// Disable catalog update on start for WebGL / Отключить обновление каталога при запуске для WebGL
+        /// Standalone specific settings / Настройки для Standalone
         /// </summary>
-        public bool WebGLDisableCatalogUpdateOnStart = false;
+        [Serializable]
+        public class StandaloneSettings
+        {
+            public int MaxConcurrentRequests = 10;
+            public int FirstLoadBudgetMB = 50;
+        }
         
-        [Header("Android Settings")]
-        
-        /// <summary>
-        /// Use Asset Database for Android development / Использовать Asset Database для разработки под Android
-        /// </summary>
-        public bool AndroidUseAssetDatabase = false;
-        
-        /// <summary>
-        /// Simulate groups for Android development / Симулировать группы для разработки под Android
-        /// </summary>
-        public bool AndroidSimulateGroups = false;
-        
-        /// <summary>
-        /// Enable split APKs by architecture / Включить разделение APK по архитектуре
-        /// </summary>
-        public bool AndroidSplitByArchitecture = true;
-        
-        [Header("iOS Settings")]
-        
-        /// <summary>
-        /// Enable on-demand resources for iOS / Включить ресурсы по требованию для iOS
-        /// </summary>
-        public bool IOSOnDemandResources = false;
-        
-        /// <summary>
-        /// iOS bundle identifier prefix / Префикс идентификатора bundle для iOS
-        /// </summary>
-        public string IOSBundlePrefix = "com.company.game";
-        
-        [Header("Network Settings")]
-        
-        /// <summary>
-        /// Connection timeout in seconds / Таймаут соединения в секундах
-        /// </summary>
-        [Range(10, 300)]
-        public int ConnectionTimeoutSeconds = 60;
-        
-        /// <summary>
-        /// Enable retry on network failure / Включить повтор при сетевой ошибке
-        /// </summary>
-        public bool EnableNetworkRetry = true;
-        
-        /// <summary>
-        /// Network retry attempts / Количество попыток при сетевой ошибке
-        /// </summary>
-        [Range(1, 5)]
-        public int NetworkRetryAttempts = 3;
+        public WebGLSettings WebGL = new WebGLSettings();
+        public AndroidSettings Android = new AndroidSettings();
+        public IOSSettings IOS = new IOSSettings();
+        public StandaloneSettings Standalone = new StandaloneSettings();
         
         /// <summary>
         /// Get settings for current platform / Получить настройки для текущей платформы
         /// </summary>
-        public PlatformSpecificSettings GetCurrentPlatformSettings()
+        public object GetCurrentPlatformSettings()
         {
 #if UNITY_WEBGL
-            return new PlatformSpecificSettings
-            {
-                MaxConcurrentRequests = WebGLMaxConcurrentRequests,
-                CatalogTimeout = WebGLCatalogTimeout,
-                DisableCatalogUpdateOnStart = WebGLDisableCatalogUpdateOnStart,
-                UseAssetDatabase = false,
-                SimulateGroups = false
-            };
+            return WebGL;
 #elif UNITY_ANDROID
-            return new PlatformSpecificSettings
-            {
-                MaxConcurrentRequests = 4,
-                CatalogTimeout = 45,
-                DisableCatalogUpdateOnStart = false,
-                UseAssetDatabase = AndroidUseAssetDatabase,
-                SimulateGroups = AndroidSimulateGroups
-            };
+            return Android;
 #elif UNITY_IOS
-            return new PlatformSpecificSettings
-            {
-                MaxConcurrentRequests = 4,
-                CatalogTimeout = 45,
-                DisableCatalogUpdateOnStart = false,
-                UseAssetDatabase = false,
-                SimulateGroups = false
-            };
+            return IOS;
 #else
-            return new PlatformSpecificSettings
-            {
-                MaxConcurrentRequests = 6,
-                CatalogTimeout = 30,
-                DisableCatalogUpdateOnStart = false,
-                UseAssetDatabase = true,
-                SimulateGroups = true
-            };
+            return Standalone;
 #endif
         }
         
         /// <summary>
-        /// Get platform name / Получить название платформы
+        /// Get current platform name / Получить имя текущей платформы
         /// </summary>
         public string GetCurrentPlatformName()
         {
@@ -133,21 +91,40 @@ namespace Project.Core.Services.Addressable.Models
 #elif UNITY_IOS
             return "iOS";
 #else
-            return "Editor";
+            return "Standalone";
 #endif
         }
-    }
-    
-    /// <summary>
-    /// Platform-specific settings structure / Структура платформо-специфичных настроек
-    /// </summary>
-    [Serializable]
-    public class PlatformSpecificSettings
-    {
-        public int MaxConcurrentRequests;
-        public int CatalogTimeout;
-        public bool DisableCatalogUpdateOnStart;
-        public bool UseAssetDatabase;
-        public bool SimulateGroups;
+        
+        /// <summary>
+        /// Get max concurrent requests for current platform / Получить макс. одновременных запросов для текущей платформы
+        /// </summary>
+        public int GetMaxConcurrentRequests()
+        {
+#if UNITY_WEBGL
+            return WebGL.MaxConcurrentRequests;
+#elif UNITY_ANDROID
+            return Android.MaxConcurrentRequests;
+#elif UNITY_IOS
+            return IOS.MaxConcurrentRequests;
+#else
+            return Standalone.MaxConcurrentRequests;
+#endif
+        }
+        
+        /// <summary>
+        /// Get first load budget in MB for current platform / Получить бюджет первой загрузки в МБ для текущей платформы
+        /// </summary>
+        public int GetFirstLoadBudgetMB()
+        {
+#if UNITY_WEBGL
+            return WebGL.FirstLoadBudgetMB;
+#elif UNITY_ANDROID
+            return Android.FirstLoadBudgetMB;
+#elif UNITY_IOS
+            return IOS.FirstLoadBudgetMB;
+#else
+            return Standalone.FirstLoadBudgetMB;
+#endif
+        }
     }
 }

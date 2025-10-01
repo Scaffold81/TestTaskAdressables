@@ -12,7 +12,7 @@ EditorBuildSettings:
     path: Assets/Project/Scenes/Interstitial.unity
     guid: 0667db1820bf5a54096e2e3c38f10146
   - enabled: 1
-    path: Assets/Project/Scenes/Main.unity
+    path: Assets/Project/Scenes/MainMenu.unity
     guid: 42c526a47c4630649abf1d0c43e06c54
   - enabled: 1
     path: Assets/Project/Scenes/MainGame.unity

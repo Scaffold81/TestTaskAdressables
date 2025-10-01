@@ -31,9 +31,9 @@ namespace Game.Controllers.SceneMenegment
         /// Инициализация компонента и запуск процесса загрузки.
         /// Component initialization and loading process start.
         /// </summary>
-        private void Start()
+        private async void Start()
         {
-            LoadTargetSceneAsync().Forget();
+            await LoadTargetSceneAsync();
         }
 
         /// <summary>
@@ -43,10 +43,17 @@ namespace Game.Controllers.SceneMenegment
         /// <returns>Операция UniTask / UniTask operation</returns>
         private async UniTask LoadTargetSceneAsync()
         {
-            // Минимальное время показа загрузочного экрана
-            await UniTask.Delay(TimeSpan.FromSeconds(minLoadingTime));
+            try
+            {
+                // Минимальное время показа загрузочного экрана
+                await UniTask.Delay(TimeSpan.FromSeconds(minLoadingTime));
 
-            sceneManagerService.LoadSceneAsync(sceneManagerService.TargetSceneId);
+                await sceneManagerService.LoadSceneAsync(sceneManagerService.TargetSceneId);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LoadingSceneController] Failed to load target scene: {ex.Message}");
+            }
         }
     }
 }

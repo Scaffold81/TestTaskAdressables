@@ -1,15 +1,13 @@
 namespace Game.Enums
 {
     /// <summary>
-    /// Идентификаторы сцен игры.
-    /// Game scene identifiers.
+    /// Game scene identifiers
+    /// Идентификаторы сцен игры
     /// </summary>
     public enum SceneId
     {
-        None = 0,
-        Start = 1,
-        Main = 2,
-        Interstitial = 3,
-        MainGame = 4
+        MainMenu = 0,      // Главное меню
+        Loading = 1,       // Экран загрузки
+        GameplayDemo = 2   // Демо геймплея (опционально)
     }
 }

@@ -11,7 +11,7 @@ namespace Project.Core.Services.Addressable.Models
     public class CatalogInfo
     {
         /// <summary>
-        /// Catalog name / Имя каталога
+        /// Catalog name / Название каталога
         /// </summary>
         public string Name;
         
@@ -21,44 +21,53 @@ namespace Project.Core.Services.Addressable.Models
         public string Version;
         
         /// <summary>
-        /// Catalog URL / URL каталога
+        /// Catalog file name / Имя файла каталога
         /// </summary>
-        public string Url;
+        public string FileName;
         
         /// <summary>
-        /// Is separate catalog / Является ли отдельным каталогом
+        /// Is this a remote catalog / Является ли каталог удаленным
         /// </summary>
-        public bool IsSeparate;
+        public bool IsRemote;
         
         /// <summary>
-        /// Associated group names / Связанные группы
-        /// </summary>
-        public string[] GroupNames;
-        
-        /// <summary>
-        /// Last update time / Время последнего обновления
+        /// Last update timestamp / Временная метка последнего обновления
         /// </summary>
         public DateTime LastUpdated;
         
         /// <summary>
-        /// Constructor / Конструктор
+        /// Groups included in this catalog / Группы, включенные в этот каталог
         /// </summary>
-        public CatalogInfo(string name, string version, string url, bool isSeparate, string[] groupNames)
+        public string[] IncludedGroups;
+        
+        /// <summary>
+        /// Default constructor / Конструктор по умолчанию
+        /// </summary>
+        public CatalogInfo()
         {
-            Name = name;
-            Version = version;
-            Url = url;
-            IsSeparate = isSeparate;
-            GroupNames = groupNames ?? new string[0];
             LastUpdated = DateTime.Now;
+            IncludedGroups = Array.Empty<string>();
         }
         
         /// <summary>
-        /// Get display name / Получить отображаемое имя
+        /// Constructor with parameters / Конструктор с параметрами
         /// </summary>
-        public string GetDisplayName()
+        public CatalogInfo(string name, string version, string fileName, bool isRemote, string[] includedGroups)
         {
-            return $"{Name} v{Version}";
+            Name = name;
+            Version = version;
+            FileName = fileName;
+            IsRemote = isRemote;
+            LastUpdated = DateTime.Now;
+            IncludedGroups = includedGroups ?? Array.Empty<string>();
+        }
+        
+        /// <summary>
+        /// Check if catalog needs update / Проверить, нужно ли обновить каталог
+        /// </summary>
+        public bool NeedsUpdate(TimeSpan maxAge)
+        {
+            return (DateTime.Now - LastUpdated) > maxAge;
         }
         
         /// <summary>
@@ -66,7 +75,8 @@ namespace Project.Core.Services.Addressable.Models
         /// </summary>
         public override string ToString()
         {
-            return $"Catalog: {GetDisplayName()} | Groups: {string.Join(", ", GroupNames)} | Updated: {LastUpdated:yyyy-MM-dd HH:mm}";
+            var location = IsRemote ? "Remote" : "Local";
+            return $"{Name} v{Version} ({location}) - {IncludedGroups.Length} groups - Updated: {LastUpdated:g}";
         }
     }
 }

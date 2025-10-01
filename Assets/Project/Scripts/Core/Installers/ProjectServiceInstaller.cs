@@ -1,54 +1,66 @@
-using Game.Services;
 using Project.Core.Services.Addressable;
 using Project.Core.Services.Addressable.Memory;
 using Project.Core.Services.Loading;
+using Game.Services;
 using UnityEngine;
 using Zenject;
 
-namespace Game.Installers
+namespace Project.Core.Installers
 {
     /// <summary>
-    /// Основной инсталлер сервисов проекта. Регистрирует все основные сервисы игры.
     /// Main project services installer. Registers all core game services.
+    /// Основной инсталлер сервисов проекта. Регистрирует все основные сервисы игры.
     /// </summary>
     public class ProjectServiceInstaller : MonoInstaller
     {
         /// <summary>
-        /// Основной метод инсталляции зависимостей.
         /// Main dependency installation method.
+        /// Основной метод инсталляции зависимостей.
         /// </summary>
         public override void InstallBindings()
         {
             BindCoreServices();
             BindAddressableServices();
-        }
-
-        /// <summary>
-        /// Привязывает основные сервисы игры.
-        /// Binds core game services.
-        /// </summary>
-        private void BindCoreServices()
-        {
-            // Base Services (no dependencies)
-            Container.Bind<ISaveService>().To<SaveService>().AsSingle();
-            Container.Bind<IObjectPoolService>().To<ObjectPoolService>().AsSingle();
-            Container.Bind<IGameFactory>().To<GameFactory>().AsSingle();
-            Container.Bind<ISettingsService>().To<SettingsService>().AsSingle();
+            BindUtilityServices();
             
-            // Services with dependencies
-            Container.Bind<IPlayerDataService>().To<PlayerDataService>().AsSingle();
-            Container.Bind<IAudioService>().To<AudioService>().AsSingle().NonLazy();
-            Container.Bind<ILocalizationService>().To<UnityLocalizationService>().AsSingle();
-            Container.Bind<IUIPageService>().To<UIPageService>().AsSingle();
-            Container.Bind<ISceneManagerService>().To<SceneManagerService>().AsSingle();
+            Debug.Log("[ProjectServiceInstaller] All services installed successfully");
         }
         
         /// <summary>
-        /// Привязывает сервисы Addressables.
+        /// Binds core game services.
+        /// Привязывает основные игровые сервисы.
+        /// </summary>
+        private void BindCoreServices()
+        {
+            // Scene Management
+            Container.Bind<ISceneManagerService>().To<SceneManagerService>().AsSingle();
+            
+            // Factory Services
+            Container.Bind<IGameFactory>().To<GameFactory>().AsSingle();
+            
+            // Object Pooling
+            Container.Bind<IObjectPoolService>().To<ObjectPoolService>().AsSingle();
+            
+            // Audio Service (depends on IAudioConfigRepository from GlobalConfigInstaller)
+            Container.Bind<IAudioService>().To<AudioService>().AsSingle();
+            
+            // UI Management
+            Container.Bind<IUIPageService>().To<UIPageService>().AsSingle();
+            
+            // Save System
+            Container.Bind<ISaveService>().To<SaveService>().AsSingle();
+            
+            Debug.Log("[ProjectServiceInstaller] Core services bound");
+        }
+        
+        /// <summary>
         /// Binds Addressable services.
+        /// Привязывает сервисы Addressables.
         /// </summary>
         private void BindAddressableServices()
         {
+            // NOTE: IAddressableConfigRepository is bound in GlobalConfigInstaller
+            
             // Bind memory manager
             Container.Bind<IAddressableMemoryManager>().To<AddressableMemoryManager>().AsSingle();
             
@@ -61,7 +73,25 @@ namespace Game.Installers
             // Bind Loading service
             Container.Bind<ILoadingService>().To<LoadingService>().AsSingle();
             
-            Debug.Log("[ProjectServiceInstaller] Addressable services bound successfully");
+            Debug.Log("[ProjectServiceInstaller] Addressable services bound");
+        }
+        
+        /// <summary>
+        /// Binds utility services.
+        /// Привязывает вспомогательные сервисы.
+        /// </summary>
+        private void BindUtilityServices()
+        {
+            // Player Data Service
+            Container.Bind<IPlayerDataService>().To<PlayerDataService>().AsSingle();
+            
+            // Settings Service
+            Container.Bind<ISettingsService>().To<SettingsService>().AsSingle();
+            
+            // Localization Service
+            Container.Bind<ILocalizationService>().To<UnityLocalizationService>().AsSingle();
+            
+            Debug.Log("[ProjectServiceInstaller] Utility services bound");
         }
     }
 }

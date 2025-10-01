@@ -13,7 +13,7 @@ namespace Project.UI.Addressable
     /// Developer overlay panel for debugging Addressable system
     /// Панель разработчика для отладки системы Addressables
     /// </summary>
-    public class DevOverlayView : Game.UI.PageBase
+    public class DevOverlayView : MonoBehaviour
     {
         [Header("Control Buttons")]
         [SerializeField] private Button clearCacheButton;
@@ -116,8 +116,9 @@ namespace Project.UI.Addressable
         {
             if (memoryText != null && _memoryManager != null)
             {
-                var currentMemory = _memoryManager.CurrentMemoryUsage;
-                var memoryLimit = _memoryManager.MemoryLimit;
+                var stats = _memoryManager.GetMemoryStats();
+                var currentMemory = stats.UsedMemoryBytes;
+                var memoryLimit = stats.TotalMemoryBytes;
                 var memoryMB = currentMemory / (1024f * 1024f);
                 var limitMB = memoryLimit / (1024f * 1024f);
                 
@@ -130,7 +131,7 @@ namespace Project.UI.Addressable
             if (assetsText != null)
             {
                 var loadedCount = _addressableService?.LoadedAssets?.Count ?? 0;
-                var trackedCount = _memoryManager?.LoadedAssetsCount ?? 0;
+                var trackedCount = _memoryManager?.GetMemoryStats().TrackedAssetsCount ?? 0;
                 
                 assetsText.text = $"Assets: {loadedCount} loaded, {trackedCount} tracked";
             }
@@ -240,10 +241,9 @@ namespace Project.UI.Addressable
         {
             var report = new System.Text.StringBuilder();
             report.AppendLine("=== MEMORY REPORT ===");
-            report.AppendLine($"Addressable Memory: {stats.AddressableMemory / (1024f * 1024f):F1} MB");
-            report.AppendLine($"Tracked Assets: {stats.TrackedAssets}");
-            report.AppendLine($"Average Asset Size: {stats.AverageAssetSize / 1024f:F1} KB");
-            report.AppendLine($"System Memory: {stats.SystemMemory / (1024f * 1024f):F1} MB");
+            report.AppendLine($"Addressable Memory: {stats.UsedMemoryBytes / (1024f * 1024f):F1} MB");
+            report.AppendLine($"Tracked Assets: {stats.TrackedAssetsCount}");
+            report.AppendLine($"Memory Pressure: {stats.MemoryPressure:P1}");
             
             return report.ToString();
         }
@@ -251,14 +251,6 @@ namespace Project.UI.Addressable
         private void OnDestroy()
         {
             _disposables?.Dispose();
-        }
-        
-        // Conditional compilation for different builds
-        [System.Diagnostics.Conditional("UNITY_EDITOR")]
-        [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-        private void DebugLog(string message)
-        {
-            Debug.Log($"[DevOverlay] {message}");
         }
     }
 }

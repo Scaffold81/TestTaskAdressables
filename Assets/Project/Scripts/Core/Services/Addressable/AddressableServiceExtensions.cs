@@ -1,292 +1,231 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using Project.Core.Services.Addressable;
-using Project.Core.Services.Loading;
 
 namespace Project.Core.Services.Addressable
 {
     /// <summary>
-    /// Extension methods for AddressableService integration with LoadingService
-    /// Методы расширения для интеграции AddressableService с LoadingService
+    /// Extension methods for IAddressableService
+    /// Методы расширения для IAddressableService
     /// </summary>
     public static class AddressableServiceExtensions
     {
         /// <summary>
-        /// Download dependencies with progress tracking through LoadingService
-        /// Загрузить зависимости с отслеживанием прогресса через LoadingService
+        /// Load multiple assets by keys
+        /// Загрузить несколько ресурсов по ключам
         /// </summary>
-        public static async UniTask DownloadDependenciesWithProgressAsync(
-            this IAddressableService addressableService,
-            IEnumerable<string> keys,
-            ILoadingService loadingService,
-            string loadingTitle = "Downloading Content")
+        public static async UniTask<T[]> LoadAssetsAsync<T>(this IAddressableService service, params string[] keys) 
+            where T : UnityEngine.Object
         {
-            if (addressableService == null || loadingService == null) return;
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            var keyArray = keys?.ToArray();
-            if (keyArray == null || keyArray.Length == 0) return;
-
-            try
+            if (keys == null || keys.Length == 0)
+                return Array.Empty<T>();
+            
+            var results = new List<T>();
+            
+            foreach (var key in keys)
             {
-                // Show loading screen
-                loadingService.ShowProgress(loadingTitle, "Preparing download...", 0f);
-                
-                // Get total download size first
-                var totalSize = await addressableService.GetDownloadSizeAsync(keyArray);
-                var sizeText = totalSize > 0 ? $"({FormatBytes(totalSize)})" : "";
-                
-                if (totalSize == 0)
+                try
                 {
-                    loadingService.UpdateProgress("Content already cached", 1f);
-                    await UniTask.Delay(TimeSpan.FromSeconds(0.5f)); // Brief pause to show message
-                    return;
+                    var asset = await service.LoadAssetAsync<T>(key);
+                    results.Add(asset);
                 }
-
-                // Create progress tracker
-                var progress = new Progress<float>(progressValue =>
+                catch (Exception ex)
                 {
-                    var statusText = $"Downloading content... {sizeText}";
-                    loadingService.UpdateProgress(statusText, progressValue);
-                });
-
-                // Download with progress
-                await addressableService.DownloadDependenciesAsync(keyArray, progress);
-                
-                // Final update
-                loadingService.UpdateProgress("Download complete!", 1f);
-                
-                Debug.Log($"[AddressableServiceExtensions] Downloaded {keyArray.Length} dependencies successfully");
+                    Debug.LogError($"[AddressableServiceExtensions] Failed to load {key}: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                loadingService.UpdateProgress($"Download failed: {ex.Message}", 1f);
-                Debug.LogError($"[AddressableServiceExtensions] Download failed: {ex.Message}");
-                throw;
-            }
+            
+            return results.ToArray();
         }
-
+        
         /// <summary>
-        /// Load asset with loading progress display
-        /// Загрузить ресурс с отображением прогресса загрузки
+        /// Load asset with timeout
+        /// Загрузить ресурс с таймаутом
         /// </summary>
-        public static async UniTask<T> LoadAssetWithProgressAsync<T>(
-            this IAddressableService addressableService,
-            string key,
-            ILoadingService loadingService,
-            string loadingTitle = null) where T : UnityEngine.Object
+        public static async UniTask<T> LoadAssetWithTimeoutAsync<T>(
+            this IAddressableService service, 
+            string key, 
+            TimeSpan timeout) where T : UnityEngine.Object
         {
-            if (addressableService == null) return null;
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            var title = loadingTitle ?? $"Loading {typeof(T).Name}";
+            var loadTask = service.LoadAssetAsync<T>(key);
+            var timeoutTask = UniTask.Delay(timeout);
             
-            try
+            var (hasResultLeft, result) = await UniTask.WhenAny(loadTask, timeoutTask);
+            
+            if (hasResultLeft)
             {
-                if (loadingService != null)
-                {
-                    loadingService.ShowProgress(title, $"Loading {key}...", 0f);
-                }
-                
-                var asset = await addressableService.LoadAssetAsync<T>(key);
-                
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress("Asset loaded successfully!", 1f);
-                }
-                
-                return asset;
+                return result;
             }
-            catch (Exception ex)
+            else
             {
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress($"Failed to load {key}: {ex.Message}", 1f);
-                }
-                
-                Debug.LogError($"[AddressableServiceExtensions] Failed to load {key}: {ex.Message}");
-                throw;
+                throw new TimeoutException($"Loading {key} timed out after {timeout.TotalSeconds}s");
             }
         }
-
+        
         /// <summary>
-        /// Load scene with progress display
-        /// Загрузить сцену с отображением прогресса
+        /// Preload assets for specific group
+        /// Предзагрузить ресурсы для конкретной группы
         /// </summary>
-        public static async UniTask LoadSceneWithProgressAsync(
-            this IAddressableService addressableService,
-            string sceneKey,
-            ILoadingService loadingService,
-            string loadingTitle = null)
+        public static async UniTask PreloadGroupAsync(
+            this IAddressableService service, 
+            string[] keys, 
+            IProgress<float> progress = null)
         {
-            if (addressableService == null) return;
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            var title = loadingTitle ?? "Loading Scene";
+            if (keys == null || keys.Length == 0)
+                return;
             
-            try
-            {
-                if (loadingService != null)
-                {
-                    loadingService.ShowProgress(title, $"Loading {sceneKey}...", 0f);
-                }
-
-                await addressableService.LoadSceneAsync(sceneKey);
-                
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress("Scene loaded successfully!", 1f);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress($"Failed to load scene: {ex.Message}", 1f);
-                }
-                
-                Debug.LogError($"[AddressableServiceExtensions] Failed to load scene {sceneKey}: {ex.Message}");
-                throw;
-            }
+            // Download dependencies first / Сначала загрузить зависимости
+            await service.DownloadDependenciesAsync(keys, progress);
+            
+            Debug.Log($"[AddressableServiceExtensions] Preloaded {keys.Length} assets");
         }
-
+        
         /// <summary>
-        /// Batch load multiple assets with progress
-        /// Пакетная загрузка нескольких ресурсов с прогрессом
+        /// Check if asset is loaded
+        /// Проверить, загружен ли ресурс
         /// </summary>
-        public static async UniTask<Dictionary<string, T>> LoadMultipleAssetsWithProgressAsync<T>(
-            this IAddressableService addressableService,
-            IEnumerable<string> keys,
-            ILoadingService loadingService,
-            string loadingTitle = null) where T : UnityEngine.Object
+        public static bool IsAssetLoaded(this IAddressableService service, string key)
         {
-            if (addressableService == null) return new Dictionary<string, T>();
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            var keyArray = keys?.ToArray();
-            if (keyArray == null || keyArray.Length == 0) return new Dictionary<string, T>();
-            
-            var title = loadingTitle ?? $"Loading {keyArray.Length} {typeof(T).Name}s";
-            var results = new Dictionary<string, T>();
-            
-            try
-            {
-                if (loadingService != null)
-                {
-                    loadingService.ShowProgress(title, "Preparing to load assets...", 0f);
-                }
-                
-                for (int i = 0; i < keyArray.Length; i++)
-                {
-                    var key = keyArray[i];
-                    var progress = (float)i / keyArray.Length;
-                    
-                    if (loadingService != null)
-                    {
-                        loadingService.UpdateProgress($"Loading {key}... ({i + 1}/{keyArray.Length})", progress);
-                    }
-                    
-                    try
-                    {
-                        var asset = await addressableService.LoadAssetAsync<T>(key);
-                        if (asset != null)
-                        {
-                            results[key] = asset;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[AddressableServiceExtensions] Failed to load {key}: {ex.Message}");
-                        // Continue loading other assets
-                    }
-                }
-                
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress($"Loaded {results.Count}/{keyArray.Length} assets", 1f);
-                }
-                
-                return results;
-            }
-            catch (Exception ex)
-            {
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress($"Batch load failed: {ex.Message}", 1f);
-                }
-                
-                Debug.LogError($"[AddressableServiceExtensions] Batch load failed: {ex.Message}");
-                throw;
-            }
+            return service.LoadedAssets.ContainsKey(key);
         }
-
+        
         /// <summary>
-        /// Preload assets by category with progress
-        /// Предварительная загрузка ресурсов по категории с прогрессом
+        /// Get loaded asset without loading
+        /// Получить загруженный ресурс без загрузки
         /// </summary>
-        public static async UniTask PreloadAssetsByCategoryAsync(
-            this IAddressableService addressableService,
-            string category,
-            ILoadingService loadingService,
-            string loadingTitle = null)
+        public static T GetLoadedAsset<T>(this IAddressableService service, string key) where T : UnityEngine.Object
         {
-            if (addressableService == null || string.IsNullOrEmpty(category)) return;
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            var title = loadingTitle ?? $"Preloading {category}";
-            
-            try
+            if (service.LoadedAssets.TryGetValue(key, out var asset))
             {
-                if (loadingService != null)
-                {
-                    loadingService.ShowProgress(title, $"Checking {category} content size...", 0f);
-                }
-                
-                // Get download size for category
-                var downloadSize = await addressableService.GetDownloadSizeAsync(category);
-                
-                if (downloadSize > 0)
-                {
-                    // Download dependencies first
-                    await addressableService.DownloadDependenciesWithProgressAsync(
-                        new[] { category }, loadingService, title);
-                }
-                else
-                {
-                    if (loadingService != null)
-                    {
-                        loadingService.UpdateProgress($"{category} content already available", 1f);
-                    }
-                }
+                return asset as T;
             }
-            catch (Exception ex)
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// Release multiple assets
+        /// Освободить несколько ресурсов
+        /// </summary>
+        public static void ReleaseAssets(this IAddressableService service, params string[] keys)
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+            
+            if (keys == null || keys.Length == 0)
+                return;
+            
+            foreach (var key in keys)
             {
-                if (loadingService != null)
-                {
-                    loadingService.UpdateProgress($"Preload failed: {ex.Message}", 1f);
-                }
-                
-                Debug.LogError($"[AddressableServiceExtensions] Preload category {category} failed: {ex.Message}");
-                throw;
+                service.ReleaseAsset(key);
             }
         }
-
+        
+        /// <summary>
+        /// Get total download size for multiple keys
+        /// Получить общий размер загрузки для нескольких ключей
+        /// </summary>
+        public static async UniTask<long> GetTotalDownloadSizeAsync(
+            this IAddressableService service, 
+            params string[] keys)
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+            
+            return await service.GetDownloadSizeAsync(keys);
+        }
+        
+        /// <summary>
+        /// Get formatted download size string
+        /// Получить отформатированную строку размера загрузки
+        /// </summary>
+        public static async UniTask<string> GetFormattedDownloadSizeAsync(
+            this IAddressableService service, 
+            params string[] keys)
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+            
+            var sizeBytes = await service.GetDownloadSizeAsync(keys);
+            return FormatBytes(sizeBytes);
+        }
+        
+        /// <summary>
+        /// Load asset or get cached
+        /// Загрузить ресурс или получить из кеша
+        /// </summary>
+        public static async UniTask<T> LoadOrGetCachedAsync<T>(
+            this IAddressableService service, 
+            string key) where T : UnityEngine.Object
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+            
+            // Check if already loaded / Проверить, загружен ли уже
+            var cached = service.GetLoadedAsset<T>(key);
+            if (cached != null)
+            {
+                Debug.Log($"[AddressableServiceExtensions] Using cached asset: {key}");
+                return cached;
+            }
+            
+            // Load new / Загрузить новый
+            return await service.LoadAssetAsync<T>(key);
+        }
+        
         /// <summary>
         /// Format bytes to human readable string
         /// Форматировать байты в читаемую строку
         /// </summary>
         private static string FormatBytes(long bytes)
         {
-            const long KB = 1024;
-            const long MB = KB * 1024;
-            const long GB = MB * 1024;
-
-            if (bytes >= GB)
-                return $"{bytes / (float)GB:F2} GB";
-            if (bytes >= MB)
-                return $"{bytes / (float)MB:F2} MB";
-            if (bytes >= KB)
-                return $"{bytes / (float)KB:F2} KB";
+            if (bytes < 1024)
+                return $"{bytes} B";
+            if (bytes < 1024 * 1024)
+                return $"{bytes / 1024f:F1} KB";
+            if (bytes < 1024 * 1024 * 1024)
+                return $"{bytes / (1024f * 1024f):F1} MB";
+            return $"{bytes / (1024f * 1024f * 1024f):F2} GB";
+        }
+        
+        /// <summary>
+        /// Wait until service is initialized
+        /// Ждать пока сервис инициализируется
+        /// </summary>
+        public static async UniTask WaitForInitializationAsync(
+            this IAddressableService service, 
+            int maxWaitTimeSeconds = 30)
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
             
-            return $"{bytes} B";
+            var startTime = Time.time;
+            
+            while (!service.IsInitialized)
+            {
+                if (Time.time - startTime > maxWaitTimeSeconds)
+                {
+                    throw new TimeoutException($"Service initialization timeout after {maxWaitTimeSeconds}s");
+                }
+                
+                await UniTask.Yield();
+            }
         }
     }
 }
